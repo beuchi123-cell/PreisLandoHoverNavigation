@@ -4,26 +4,29 @@
     "use strict";
 
     const DESKTOP_BREAKPOINT = 1200;
-    const MAX_CATEGORIES = 100;
+    const MAX_CHILDREN = 100;
 
     /*
-     * Cache:
+     * Cache für bereits geladene Unterkategorien.
      *
-     * rootCategories:
-     * Hauptkategorien des Step-by-Step-Widgets
-     *
-     * childCache:
-     * Unterkategorien je Hauptkategorie
+     * Beispiel:
+     * {
+     *   1234: [...],
+     *   5678: [...]
+     * }
      */
-    let rootCategories = null;
-    let rootCategoriesPromise = null;
-
     const childCache = {};
-    const childPromises = {};
+
+    /*
+     * Verhindert doppelte parallele Requests,
+     * wenn man schnell mehrfach über dieselbe
+     * Kategorie fährt.
+     */
+    const childRequests = {};
 
 
     /* =====================================================
-       HILFSFUNKTIONEN
+       ALLGEMEINE HILFSFUNKTIONEN
        ===================================================== */
 
     function isDesktop()
@@ -41,9 +44,10 @@
 
         try
         {
-            const parsedUrl = new URL(url, window.location.origin);
+            const parsed =
+                new URL(url, window.location.origin);
 
-            return parsedUrl.pathname
+            return parsed.pathname
                 .replace(/\/+/g, "/")
                 .replace(/\/$/, "")
                 .toLowerCase();
@@ -65,7 +69,6 @@
         if (
             category &&
             category.details &&
-            category.details.length &&
             category.details[0] &&
             category.details[0].name
         )
@@ -93,7 +96,7 @@
 
         /*
          * Sprachpräfix berücksichtigen,
-         * genauso wie plentyShop es macht.
+         * falls plentyShop Sprach-URLs nutzt.
          */
         if (
             typeof App !== "undefined" &&
@@ -102,11 +105,16 @@
             App.language
         )
         {
-            const languagePrefix = "/" + App.language;
+            const languagePrefix =
+                "/" + App.language;
 
-            if (url.indexOf(languagePrefix + "/") !== 0)
+            if (
+                url !== languagePrefix &&
+                url.indexOf(languagePrefix + "/") !== 0
+            )
             {
-                url = languagePrefix + url;
+                url =
+                    languagePrefix + url;
             }
         }
 
@@ -114,21 +122,20 @@
     }
 
 
+    /* =====================================================
+       BILDER DER UNTERKATEGORIEN
+       ===================================================== */
+
     function getImageSource()
     {
-        const component = document.querySelector(
-            ".kategorie-11-spalten step-by-step-navigation"
-        );
-
-        if (!component)
-        {
-            return "image2Path";
-        }
-
-        return (
-            component.getAttribute("image-source") ||
-            "image2Path"
-        );
+        /*
+         * Das ursprüngliche Vue-Element ist nach
+         * dem Mount nicht mehr vorhanden.
+         *
+         * Deshalb verwenden wir image2Path bevorzugt
+         * und imagePath als Fallback.
+         */
+        return "image2Path";
     }
 
 
@@ -137,32 +144,23 @@
         if (
             !category ||
             !category.details ||
-            !category.details.length ||
             !category.details[0]
         )
         {
             return "";
         }
 
-        const details = category.details[0];
-        const imageSource = getImageSource();
+        const details =
+            category.details[0];
 
-        /*
-         * Zuerst die im ShopBuilder gewählte Bildquelle.
-         */
-        let imagePath = details[imageSource];
+        const preferredSource =
+            getImageSource();
 
-        /*
-         * Falls dort nichts hinterlegt ist:
-         * Bild 2, danach Bild 1 als Fallback.
-         */
-        if (!imagePath)
-        {
-            imagePath =
-                details.image2Path ||
-                details.imagePath ||
-                "";
-        }
+        let imagePath =
+            details[preferredSource] ||
+            details.image2Path ||
+            details.imagePath ||
+            "";
 
         if (!imagePath)
         {
@@ -170,22 +168,25 @@
         }
 
         /*
-         * Absolute URLs unverändert übernehmen.
+         * Bereits vollständige URL?
          */
         if (
-            imagePath.indexOf("http://") === 0 ||
-            imagePath.indexOf("https://") === 0
+            imagePath.indexOf("https://") === 0 ||
+            imagePath.indexOf("http://") === 0
         )
         {
             return imagePath;
         }
 
-        /*
-         * Plenty-Kategoriebilder liegen unter /documents/.
-         */
-        imagePath = imagePath.replace(/^\/+/, "");
+        imagePath =
+            imagePath.replace(/^\/+/, "");
 
-        if (imagePath.indexOf("documents/") === 0)
+        /*
+         * Falls /documents/ bereits enthalten ist.
+         */
+        if (
+            imagePath.indexOf("documents/") === 0
+        )
         {
             return "/" + imagePath;
         }
@@ -195,49 +196,164 @@
 
 
     /* =====================================================
-       KATEGORIE-ID DES STEP-BY-STEP-WIDGETS ERMITTELN
+       VUE / VUEX FINDEN
        ===================================================== */
 
-    function getRootCategoryId()
+    function findVueInstance(widget)
     {
-        const component = document.querySelector(
-            ".kategorie-11-spalten step-by-step-navigation"
-        );
+        /*
+         * Vue 2 hinterlegt an gerenderten DOM-Knoten
+         * üblicherweise eine Referenz auf die Vue-Instanz.
+         */
+        if (widget.__vue__)
+        {
+            return widget.__vue__;
+        }
 
-        if (!component)
+        const elements =
+            widget.querySelectorAll("*");
+
+        for (const element of elements)
+        {
+            if (element.__vue__)
+            {
+                return element.__vue__;
+            }
+        }
+
+        return null;
+    }
+
+
+    function findNavigationStore(widget)
+    {
+        let vm =
+            findVueInstance(widget);
+
+        /*
+         * Falls die gefundene Komponente selbst
+         * keinen Store hat, Elternkomponenten prüfen.
+         */
+        while (vm)
+        {
+            if (
+                vm.$store &&
+                vm.$store.state &&
+                vm.$store.state.navigation
+            )
+            {
+                return vm.$store;
+            }
+
+            vm = vm.$parent;
+        }
+
+        return null;
+    }
+
+
+    function getLoadedMainCategories(widget)
+    {
+        const store =
+            findNavigationStore(widget);
+
+        if (
+            store &&
+            store.state &&
+            store.state.navigation &&
+            Array.isArray(
+                store.state.navigation.categoryChildren
+            )
+        )
+        {
+            return store.state.navigation.categoryChildren;
+        }
+
+        return [];
+    }
+
+
+    /* =====================================================
+       SICHTBAREN LINK EINER KATEGORIE ZUORDNEN
+       ===================================================== */
+
+    function findCategoryForLink(widget, link)
+    {
+        const categories =
+            getLoadedMainCategories(widget);
+
+        if (!categories.length)
         {
             return null;
         }
 
+        const visiblePath =
+            normalizePath(link.href);
+
+
         /*
-         * Je nach Vue-/Renderzustand kann Plenty
-         * category-id oder :category-id ausgeben.
+         * 1. Exakter URL-Vergleich
          */
-        const possibleValues = [
-            component.getAttribute("category-id"),
-            component.getAttribute(":category-id"),
-            component.getAttribute("v-bind:category-id")
-        ];
-
-        for (const value of possibleValues)
+        for (const category of categories)
         {
-            if (!value)
+            const categoryPath =
+                normalizePath(
+                    getCategoryUrl(category)
+                );
+
+            if (
+                categoryPath &&
+                categoryPath === visiblePath
+            )
             {
-                continue;
+                return category;
             }
+        }
 
-            /*
-             * Nur die Zahl auslesen.
-             * Funktioniert z.B. bei:
-             *
-             * 123
-             * "123"
-             */
-            const match = String(value).match(/\d+/);
 
-            if (match)
+        /*
+         * 2. Fallback:
+         * URL aus Kategorieobjekt ohne Sprachpräfix.
+         */
+        for (const category of categories)
+        {
+            const categoryPath =
+                normalizePath(category.url);
+
+            if (
+                categoryPath &&
+                visiblePath.endsWith(categoryPath)
+            )
             {
-                return parseInt(match[0], 10);
+                return category;
+            }
+        }
+
+
+        /*
+         * 3. Letzter Fallback:
+         * Kategoriename vergleichen.
+         */
+        const visibleName =
+            (
+                link.textContent || ""
+            )
+                .trim()
+                .toLowerCase();
+
+        for (const category of categories)
+        {
+            const categoryName =
+                getCategoryName(category)
+                    .trim()
+                    .toLowerCase();
+
+            if (
+                categoryName &&
+                categoryName === visibleName
+            )
+            {
+                return category;
             }
         }
 
@@ -246,16 +362,18 @@
 
 
     /* =====================================================
-       API
+       API: DIREKTE UNTERKATEGORIEN LADEN
        ===================================================== */
 
     function fetchCategoryChildren(categoryId)
     {
         const url =
             "/rest/io/categorytree/children" +
-            "?categoryId=" + encodeURIComponent(categoryId) +
+            "?categoryId=" +
+            encodeURIComponent(categoryId) +
             "&indexStart=0" +
-            "&maxCount=" + MAX_CATEGORIES;
+            "&maxCount=" +
+            MAX_CHILDREN;
 
         return fetch(
             url,
@@ -263,7 +381,8 @@
                 credentials: "same-origin",
                 headers:
                 {
-                    "X-Requested-With": "XMLHttpRequest"
+                    "X-Requested-With":
+                        "XMLHttpRequest"
                 }
             }
         )
@@ -281,110 +400,11 @@
     }
 
 
-    /* =====================================================
-       HAUPTKATEGORIEN LADEN
-       ===================================================== */
-
-    function loadRootCategories()
+    function loadCategoryChildren(categoryId)
     {
-        if (rootCategories)
-        {
-            return Promise.resolve(rootCategories);
-        }
-
-        if (rootCategoriesPromise)
-        {
-            return rootCategoriesPromise;
-        }
-
-        const rootCategoryId = getRootCategoryId();
-
-        if (!rootCategoryId)
-        {
-            return Promise.reject(
-                new Error(
-                    "Kategorie-ID des Step-by-Step-Widgets wurde nicht gefunden."
-                )
-            );
-        }
-
-        rootCategoriesPromise =
-            fetchCategoryChildren(rootCategoryId)
-                .then(function (categories)
-                {
-                    rootCategories =
-                        Array.isArray(categories)
-                            ? categories
-                            : [];
-
-                    return rootCategories;
-                })
-                .finally(function ()
-                {
-                    rootCategoriesPromise = null;
-                });
-
-        return rootCategoriesPromise;
-    }
-
-
-    /* =====================================================
-       ID EINER SICHTBAREN HAUPTKATEGORIE FINDEN
-       ===================================================== */
-
-    function findCategoryForLink(link)
-    {
-        return loadRootCategories()
-            .then(function (categories)
-            {
-                const linkPath =
-                    normalizePath(link.href);
-
-                for (const category of categories)
-                {
-                    const categoryPath =
-                        normalizePath(
-                            getCategoryUrl(category)
-                        );
-
-                    if (
-                        categoryPath &&
-                        categoryPath === linkPath
-                    )
-                    {
-                        return category;
-                    }
-                }
-
-                /*
-                 * Zweiter Versuch:
-                 * nur anhand der ursprünglichen category.url.
-                 */
-                for (const category of categories)
-                {
-                    const categoryPath =
-                        normalizePath(category.url);
-
-                    if (
-                        categoryPath &&
-                        linkPath.endsWith(categoryPath)
-                    )
-                    {
-                        return category;
-                    }
-                }
-
-                return null;
-            });
-    }
-
-
-    /* =====================================================
-       UNTERKATEGORIEN LADEN + CACHEN
-       ===================================================== */
-
-    function loadHoverChildren(categoryId)
-    {
+        /*
+         * Schon im Cache?
+         */
         if (
             Object.prototype.hasOwnProperty.call(
                 childCache,
@@ -397,12 +417,17 @@
             );
         }
 
-        if (childPromises[categoryId])
+
+        /*
+         * Request läuft schon?
+         */
+        if (childRequests[categoryId])
         {
-            return childPromises[categoryId];
+            return childRequests[categoryId];
         }
 
-        childPromises[categoryId] =
+
+        childRequests[categoryId] =
             fetchCategoryChildren(categoryId)
                 .then(function (children)
                 {
@@ -425,29 +450,33 @@
                 })
                 .finally(function ()
                 {
-                    delete childPromises[categoryId];
+                    delete childRequests[categoryId];
                 });
 
-        return childPromises[categoryId];
+
+        return childRequests[categoryId];
     }
 
 
     /* =====================================================
-       DROPDOWN ERZEUGEN
+       HOVER-DROPDOWN ERZEUGEN
        ===================================================== */
 
     function getOrCreateMenu(box)
     {
-        let menu = box.querySelector(
-            ":scope > .preis-lando-hover-menu"
-        );
+        let menu =
+            box.querySelector(
+                ":scope > .preis-lando-hover-menu"
+            );
 
         if (menu)
         {
             return menu;
         }
 
-        menu = document.createElement("div");
+        menu =
+            document.createElement("div");
+
         menu.className =
             "preis-lando-hover-menu";
 
@@ -461,11 +490,21 @@
     {
         menu.innerHTML = "";
 
-        menu.classList.remove("is-empty");
-        menu.classList.add("is-loading");
-        menu.classList.add("is-visible");
+        menu.classList.remove(
+            "is-empty"
+        );
 
-        const loading = document.createElement("div");
+        menu.classList.add(
+            "is-loading"
+        );
+
+        menu.classList.add(
+            "is-visible"
+        );
+
+
+        const loading =
+            document.createElement("div");
 
         loading.className =
             "preis-lando-hover-loading";
@@ -477,32 +516,53 @@
     }
 
 
+    /* =====================================================
+       UNTERKATEGORIEN RENDERN
+       ===================================================== */
+
     function renderChildren(menu, children)
     {
         menu.innerHTML = "";
 
-        menu.classList.remove("is-loading");
+        menu.classList.remove(
+            "is-loading"
+        );
 
-        if (!children || !children.length)
+
+        /*
+         * Keine Unterkategorien vorhanden.
+         */
+        if (
+            !children ||
+            !children.length
+        )
         {
-            menu.classList.add("is-empty");
-            menu.classList.remove("is-visible");
+            menu.classList.add(
+                "is-empty"
+            );
+
+            menu.classList.remove(
+                "is-visible"
+            );
 
             return;
         }
 
-        menu.classList.remove("is-empty");
+
+        menu.classList.remove(
+            "is-empty"
+        );
 
 
-        children.forEach(function (category)
+        for (const category of children)
         {
-            const link =
+            const item =
                 document.createElement("a");
 
-            link.className =
+            item.className =
                 "preis-lando-hover-item";
 
-            link.href =
+            item.href =
                 getCategoryUrl(category);
 
 
@@ -521,30 +581,32 @@
                 image.className =
                     "preis-lando-hover-image";
 
-                image.src = imageUrl;
+                image.src =
+                    imageUrl;
 
                 image.alt =
                     getCategoryName(category);
 
-                image.loading = "lazy";
+                image.loading =
+                    "lazy";
 
-                link.appendChild(image);
+                item.appendChild(image);
             }
             else
             {
                 /*
-                 * Platzhalter, damit Kategorien ohne Bild
-                 * trotzdem sauber ausgerichtet bleiben.
+                 * Platzhalter, damit alle Texte
+                 * gleich ausgerichtet bleiben.
                  */
-                const imagePlaceholder =
+                const placeholder =
                     document.createElement("span");
 
-                imagePlaceholder.className =
+                placeholder.className =
                     "preis-lando-hover-image " +
                     "preis-lando-hover-image-empty";
 
-                link.appendChild(
-                    imagePlaceholder
+                item.appendChild(
+                    placeholder
                 );
             }
 
@@ -562,44 +624,60 @@
             text.textContent =
                 getCategoryName(category);
 
-            link.appendChild(text);
+            item.appendChild(text);
 
 
-            menu.appendChild(link);
-        });
+            menu.appendChild(item);
+        }
 
 
-        menu.classList.add("is-visible");
+        menu.classList.add(
+            "is-visible"
+        );
     }
 
 
     /* =====================================================
-       HOVER AN EINE KATEGORIE HÄNGEN
+       EINZELNE HAUPTKATEGORIE VORBEREITEN
        ===================================================== */
 
-    function prepareCategoryBox(box)
+    function prepareCategoryBox(
+        widget,
+        box
+    )
     {
+        /*
+         * Schon vorbereitet?
+         */
         if (
-            box.dataset.preisLandoHoverReady === "1"
+            box.dataset.preisLandoHoverReady
+            === "1"
         )
         {
             return;
         }
 
-        const mainLink =
+
+        const link =
             box.querySelector(":scope > a");
 
-        if (!mainLink)
+        if (!link)
         {
             return;
         }
 
-        box.dataset.preisLandoHoverReady = "1";
+
+        box.dataset.preisLandoHoverReady =
+            "1";
 
         box.classList.add(
             "preis-lando-hover-parent"
         );
 
+
+        /* ---------------------------------------------
+           MOUSE ENTER
+           --------------------------------------------- */
 
         box.addEventListener(
             "mouseenter",
@@ -610,12 +688,42 @@
                     return;
                 }
 
+
+                const category =
+                    findCategoryForLink(
+                        widget,
+                        link
+                    );
+
+
+                /*
+                 * Kategorie konnte noch nicht
+                 * gefunden werden.
+                 *
+                 * Das kann direkt während des
+                 * Vue-Mountings kurz vorkommen.
+                 */
+                if (
+                    !category ||
+                    !category.id
+                )
+                {
+                    console.warn(
+                        "PreisLando HoverNavigation:",
+                        "Kategorie konnte nicht zugeordnet werden:",
+                        link.href
+                    );
+
+                    return;
+                }
+
+
                 const menu =
                     getOrCreateMenu(box);
 
+
                 /*
-                 * Bereits geladen:
-                 * sofort wieder anzeigen.
+                 * Bereits einmal geladen?
                  */
                 if (
                     menu.dataset.loaded === "1"
@@ -639,52 +747,26 @@
                 showLoading(menu);
 
 
-                findCategoryForLink(mainLink)
-                    .then(function (category)
-                    {
-                        /*
-                         * Die URL konnte keiner Kategorie
-                         * zugeordnet werden.
-                         */
-                        if (
-                            !category ||
-                            !category.id
-                        )
-                        {
-                            menu.classList.remove(
-                                "is-visible"
-                            );
-
-                            return [];
-                        }
-
-                        return loadHoverChildren(
-                            category.id
-                        );
-                    })
+                loadCategoryChildren(
+                    category.id
+                )
                     .then(function (children)
                     {
-                        menu.dataset.loaded = "1";
+                        menu.dataset.loaded =
+                            "1";
 
                         renderChildren(
                             menu,
                             children
                         );
-                    })
-                    .catch(function (error)
-                    {
-                        menu.classList.remove(
-                            "is-visible"
-                        );
-
-                        console.error(
-                            "PreisLando HoverNavigation:",
-                            error
-                        );
                     });
             }
         );
 
+
+        /* ---------------------------------------------
+           MOUSE LEAVE
+           --------------------------------------------- */
 
         box.addEventListener(
             "mouseleave",
@@ -692,7 +774,8 @@
             {
                 const menu =
                     box.querySelector(
-                        ":scope > .preis-lando-hover-menu"
+                        ":scope > " +
+                        ".preis-lando-hover-menu"
                     );
 
                 if (menu)
@@ -717,6 +800,7 @@
             return;
         }
 
+
         const widget =
             document.querySelector(
                 ".kategorie-11-spalten"
@@ -727,19 +811,40 @@
             return;
         }
 
+
+        /*
+         * Nur echte Kategorie-Kacheln.
+         *
+         * Der "Mehr anzeigen"-Button würde
+         * ansonsten ebenfalls getroffen.
+         */
         const boxes =
             widget.querySelectorAll(
                 ".row > div"
             );
 
+
         boxes.forEach(
-            prepareCategoryBox
+            function (box)
+            {
+                if (
+                    box.querySelector(
+                        ":scope > a"
+                    )
+                )
+                {
+                    prepareCategoryBox(
+                        widget,
+                        box
+                    );
+                }
+            }
         );
     }
 
 
     /* =====================================================
-       MOBIL: HOVER-MENÜS AUSBLENDEN
+       ALLE HOVER-MENÜS SCHLIESSEN
        ===================================================== */
 
     function closeAllHoverMenus()
@@ -748,12 +853,14 @@
             .querySelectorAll(
                 ".preis-lando-hover-menu"
             )
-            .forEach(function (menu)
-            {
-                menu.classList.remove(
-                    "is-visible"
-                );
-            });
+            .forEach(
+                function (menu)
+                {
+                    menu.classList.remove(
+                        "is-visible"
+                    );
+                }
+            );
     }
 
 
@@ -767,8 +874,8 @@
 
 
         /*
-         * Step-by-Step-Navigation wird von Vue nachgeladen.
-         * Deshalb beobachten wir DOM-Änderungen.
+         * plentyShop rendert die Kategorien über Vue.
+         * Deshalb DOM-Änderungen beobachten.
          */
         const observer =
             new MutationObserver(
@@ -781,6 +888,7 @@
                 }
             );
 
+
         observer.observe(
             document.body,
             {
@@ -790,16 +898,21 @@
         );
 
 
-        /*
-         * Wechsel Desktop <-> Mobil.
-         */
+        /* ---------------------------------------------
+           DESKTOP / MOBIL WECHSEL
+           --------------------------------------------- */
+
         let resizeTimer = null;
+
 
         window.addEventListener(
             "resize",
             function ()
             {
-                clearTimeout(resizeTimer);
+                clearTimeout(
+                    resizeTimer
+                );
+
 
                 resizeTimer =
                     setTimeout(
@@ -822,8 +935,8 @@
 
 
     /*
-     * DOMContentLoaded kann schon vorbei sein,
-     * wenn Plenty unser Template spät einbindet.
+     * Start abhängig davon,
+     * ob DOMContentLoaded bereits vorbei ist.
      */
     if (
         document.readyState === "loading"

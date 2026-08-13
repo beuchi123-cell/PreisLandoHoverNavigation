@@ -13,10 +13,25 @@ class HoverNavigationServiceProvider extends ServiceProvider
 
     public function register()
     {
+        /*
+         * Eigenen RouteServiceProvider registrieren.
+         * Darüber bauen wir anschließend unseren
+         * Preis-Endpunkt für die Schnellsuche.
+         */
+        $this->getApplication()->register(
+            HoverNavigationRouteServiceProvider::class
+        );
     }
 
-    public function boot(Twig $twig, Dispatcher $eventDispatcher)
+    public function boot(
+        Twig $twig,
+        Dispatcher $eventDispatcher
+    )
     {
+        /*
+         * Bestehende Scripts und Styles einbinden.
+         * Das bleibt unverändert.
+         */
         $eventDispatcher->listen(
             "IO.Resources.Import",
             function (ResourceContainer $container)

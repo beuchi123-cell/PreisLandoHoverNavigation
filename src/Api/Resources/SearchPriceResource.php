@@ -5,26 +5,23 @@ namespace PreisLandoHoverNavigation\Api\Resources;
 use Plenty\Plugin\Controller;
 use Plenty\Plugin\Http\Response;
 use IO\Services\ItemSearch\Factories\VariationSearchFactory;
+use IO\Services\ItemSearch\Services\ItemSearchService;
 
 class SearchPriceResource extends Controller
 {
-    /**
-     * @var Response
-     */
     private $response;
-
-    /**
-     * @var VariationSearchFactory
-     */
     private $searchFactory;
+    private $searchService;
 
     public function __construct(
         Response $response,
-        VariationSearchFactory $searchFactory
+        VariationSearchFactory $searchFactory,
+        ItemSearchService $searchService
     )
     {
         $this->response = $response;
         $this->searchFactory = $searchFactory;
+        $this->searchService = $searchService;
     }
 
     public function show(int $variationId)
@@ -32,7 +29,9 @@ class SearchPriceResource extends Controller
         try
         {
             /*
-             * Nur die gewünschte Variante suchen
+             * Suche für genau diese Variante aufbauen.
+             * Preis wird für den aktuellen Shopkunden
+             * berechnet und dem Ergebnis hinzugefügt.
              */
             $this->searchFactory
                 ->hasVariationId($variationId)
@@ -40,14 +39,16 @@ class SearchPriceResource extends Controller
                 ->withPrices([]);
 
             /*
-             * Suche ausführen
+             * Die Factory baut nur die Suche.
+             * ItemSearchService führt sie tatsächlich aus.
              */
-            $result = $this->searchFactory->search();
+            $result = $this->searchService->getResult(
+                $this->searchFactory
+            );
 
             /*
-             * Zunächst komplette Struktur zurückgeben.
-             * Damit sehen wir exakt, wo der Preis bei
-             * deiner plentyShop-Version liegt.
+             * Vorerst das vollständige Ergebnis zurückgeben.
+             * Danach greifen wir gezielt den Preis heraus.
              */
             return $this->response->json(
                 [
@@ -61,9 +62,9 @@ class SearchPriceResource extends Controller
         {
             return $this->response->json(
                 [
-                    'success' => false,
+                    'success'     => false,
                     'variationId' => $variationId,
-                    'error' => $e->getMessage()
+                    'error'       => $e->getMessage()
                 ],
                 500
             );

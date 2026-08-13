@@ -2,7 +2,7 @@
     "name": "PreisLandoHoverNavigation",
     "namespace": "PreisLandoHoverNavigation",
     "type": "plugin",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "license": "MIT",
     "description": "Hover-Navigation mit Unterkategorien und Bildern für plentyShop LTS",
     "author": "PreisLando",

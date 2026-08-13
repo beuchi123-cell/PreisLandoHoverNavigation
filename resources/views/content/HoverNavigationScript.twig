@@ -227,30 +227,45 @@ window.PreisLandoHoverVersion = "1.0.3";
 
 
     function findNavigationStore(widget)
+{
+    /*
+     * Zuerst das Widget selbst prüfen.
+     */
+    if (
+        widget.__vue__ &&
+        widget.__vue__.$store &&
+        widget.__vue__.$store.state &&
+        widget.__vue__.$store.state.navigation
+    )
     {
-        let vm =
-            findVueInstance(widget);
-
-        /*
-         * Falls die gefundene Komponente selbst
-         * keinen Store hat, Elternkomponenten prüfen.
-         */
-        while (vm)
-        {
-            if (
-                vm.$store &&
-                vm.$store.state &&
-                vm.$store.state.navigation
-            )
-            {
-                return vm.$store;
-            }
-
-            vm = vm.$parent;
-        }
-
-        return null;
+        return widget.__vue__.$store;
     }
+
+    /*
+     * Danach alle Elemente innerhalb des Widgets prüfen.
+     *
+     * Wichtig:
+     * Wir nehmen nicht mehr einfach die erste Vue-Instanz,
+     * sondern suchen gezielt eine Vue-Instanz MIT Store.
+     */
+    const elements =
+        widget.querySelectorAll("*");
+
+    for (const element of elements)
+    {
+        if (
+            element.__vue__ &&
+            element.__vue__.$store &&
+            element.__vue__.$store.state &&
+            element.__vue__.$store.state.navigation
+        )
+        {
+            return element.__vue__.$store;
+        }
+    }
+
+    return null;
+}
 
 
     function getLoadedMainCategories(widget)

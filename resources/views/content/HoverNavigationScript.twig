@@ -1088,97 +1088,95 @@ window.PreisLandoHoverVersion = "1.0.3";
        PREIS LADEN
     ----------------------------------------------------- */
 
-    function loadVariationPrice(itemId, variationId)
-    {
-        const cacheKey =
-            itemId + "_" + variationId;
+   function loadVariationPrice(itemId, variationId)
+{
+    const cacheKey =
+        itemId + "_" + variationId;
 
-        if (
-            Object.prototype.hasOwnProperty.call(
-                priceCache,
-                cacheKey
-            )
+    if (
+        Object.prototype.hasOwnProperty.call(
+            priceCache,
+            cacheKey
         )
-        {
-            return Promise.resolve(
-                priceCache[cacheKey]
-            );
-        }
+    )
+    {
+        return Promise.resolve(
+            priceCache[cacheKey]
+        );
+    }
 
-        if (pendingPrices[cacheKey])
-        {
-            return pendingPrices[cacheKey];
-        }
-
-        /*
-         * Plenty REST:
-         * einzelne Variante inkl. Verkaufspreisen
-         */
-        const url =
-            "/rest/items/" +
-            encodeURIComponent(itemId) +
-            "/variations/" +
-            encodeURIComponent(variationId) +
-            "?with=variationSalesPrices";
-
-
-        pendingPrices[cacheKey] =
-            fetch(
-                url,
-                {
-                    credentials: "same-origin",
-                    headers:
-                    {
-                        "X-Requested-With":
-                            "XMLHttpRequest"
-                    }
-                }
-            )
-                .then(function (response)
-                {
-                    if (!response.ok)
-                    {
-                        throw new Error(
-                            "Preis HTTP " +
-                            response.status
-                        );
-                    }
-
-                    return response.json();
-                })
-                .then(function (data)
-                {
-                    const price =
-                        extractPrice(data);
-
-                    priceCache[cacheKey] =
-                        price;
-
-                    return price;
-                })
-                .catch(function (error)
-                {
-                    console.warn(
-                        "PreisLando Schnellsuche:",
-                        "Preis konnte nicht geladen werden",
-                        itemId,
-                        variationId,
-                        error
-                    );
-
-                    priceCache[cacheKey] = "";
-
-                    return "";
-                })
-                .finally(function ()
-                {
-                    delete pendingPrices[
-                        cacheKey
-                    ];
-                });
-
+    if (pendingPrices[cacheKey])
+    {
         return pendingPrices[cacheKey];
     }
+
+    const url =
+        "/rest/preislando/search-price/" +
+        encodeURIComponent(variationId);
+
+
+    pendingPrices[cacheKey] =
+        fetch(
+            url,
+            {
+                credentials: "same-origin",
+                headers:
+                {
+                    "X-Requested-With":
+                        "XMLHttpRequest"
+                }
+            }
+        )
+            .then(function (response)
+            {
+                if (!response.ok)
+                {
+                    throw new Error(
+                        "Preis HTTP " +
+                        response.status
+                    );
+                }
+
+                return response.json();
+            })
+            .then(function (data)
+            {
+                const price =
+                    data &&
+                    data.success &&
+                    data.price
+                        ? data.price
+                        : "";
+
+                priceCache[cacheKey] =
+                    price;
+
+                return price;
+            })
+            .catch(function (error)
+            {
+                console.warn(
+                    "PreisLando Schnellsuche:",
+                    "Preis konnte nicht geladen werden",
+                    itemId,
+                    variationId,
+                    error
+                );
+
+                priceCache[cacheKey] = "";
+
+                return "";
+            })
+            .finally(function ()
+            {
+                delete pendingPrices[
+                    cacheKey
+                ];
+            });
+
+
+    return pendingPrices[cacheKey];
+}
 
 
     /* -----------------------------------------------------

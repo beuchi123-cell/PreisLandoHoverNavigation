@@ -998,6 +998,307 @@ window.PreisLandoHoverVersion = "1.0.3";
     {
         start();
     }
+/* =========================================================
+   PREISLANDO SCHNELLSUCHE – PREISE
+   ========================================================= */
 
+(function setupAutocompletePrices()
+{
+    const priceCache = {};
+    const pendingPrices = {};
+
+    /* -----------------------------------------------------
+       ITEM-ID + VARIANTEN-ID AUS URL LESEN
+
+       Beispiel:
+       /artikelname_28029_40021/
+                   ^^^^^ ^^^^^
+    ----------------------------------------------------- */
+
+    function getIdsFromAutocompleteUrl(url)
+    {
+        if (!url)
+        {
+            return null;
+        }
+
+        const cleanUrl =
+            String(url)
+                .split("?")[0]
+                .replace(/\/+$/, "");
+
+        const match =
+            cleanUrl.match(/_(\d+)_(\d+)$/);
+
+        if (!match)
+        {
+            return null;
+        }
+
+        return {
+            itemId: parseInt(match[1], 10),
+            variationId: parseInt(match[2], 10)
+        };
+    }
+
+
+    /* -----------------------------------------------------
+       PREIS AUS VARIANTENDATEN LESEN
+    ----------------------------------------------------- */
+
+    function extractPrice(data)
+    {
+        if (!data)
+        {
+            return "";
+        }
+
+        /*
+         * plentyShop Ergebnisstruktur
+         */
+        if (
+            data.prices &&
+            data.prices.default &&
+            data.prices.default.price &&
+            data.prices.default.price.formatted
+        )
+        {
+            return data.prices.default.price.formatted;
+        }
+
+        /*
+         * Falls Antwort nochmal verschachtelt ist
+         */
+        if (
+            data.data &&
+            data.data.prices &&
+            data.data.prices.default &&
+            data.data.prices.default.price &&
+            data.data.prices.default.price.formatted
+        )
+        {
+            return data.data.prices.default.price.formatted;
+        }
+
+        return "";
+    }
+
+
+    /* -----------------------------------------------------
+       PREIS LADEN
+    ----------------------------------------------------- */
+
+    function loadVariationPrice(itemId, variationId)
+    {
+        const cacheKey =
+            itemId + "_" + variationId;
+
+        if (
+            Object.prototype.hasOwnProperty.call(
+                priceCache,
+                cacheKey
+            )
+        )
+        {
+            return Promise.resolve(
+                priceCache[cacheKey]
+            );
+        }
+
+        if (pendingPrices[cacheKey])
+        {
+            return pendingPrices[cacheKey];
+        }
+
+        /*
+         * Plenty REST:
+         * einzelne Variante inkl. Verkaufspreisen
+         */
+        const url =
+            "/rest/items/" +
+            encodeURIComponent(itemId) +
+            "/variations/" +
+            encodeURIComponent(variationId) +
+            "?with=variationSalesPrices";
+
+
+        pendingPrices[cacheKey] =
+            fetch(
+                url,
+                {
+                    credentials: "same-origin",
+                    headers:
+                    {
+                        "X-Requested-With":
+                            "XMLHttpRequest"
+                    }
+                }
+            )
+                .then(function (response)
+                {
+                    if (!response.ok)
+                    {
+                        throw new Error(
+                            "Preis HTTP " +
+                            response.status
+                        );
+                    }
+
+                    return response.json();
+                })
+                .then(function (data)
+                {
+                    const price =
+                        extractPrice(data);
+
+                    priceCache[cacheKey] =
+                        price;
+
+                    return price;
+                })
+                .catch(function (error)
+                {
+                    console.warn(
+                        "PreisLando Schnellsuche:",
+                        "Preis konnte nicht geladen werden",
+                        itemId,
+                        variationId,
+                        error
+                    );
+
+                    priceCache[cacheKey] = "";
+
+                    return "";
+                })
+                .finally(function ()
+                {
+                    delete pendingPrices[
+                        cacheKey
+                    ];
+                });
+
+        return pendingPrices[cacheKey];
+    }
+
+
+    /* -----------------------------------------------------
+       PREIS-SPAN ANLEGEN
+    ----------------------------------------------------- */
+
+    function getOrCreatePriceElement(link)
+    {
+        let price =
+            link.querySelector(
+                ":scope > .preis-lando-search-price"
+            );
+
+        if (price)
+        {
+            return price;
+        }
+
+        price =
+            document.createElement("span");
+
+        price.className =
+            "preis-lando-search-price";
+
+        link.appendChild(price);
+
+        return price;
+    }
+
+
+    /* -----------------------------------------------------
+       EINEN SUCHTREFFER VORBEREITEN
+    ----------------------------------------------------- */
+
+    function prepareAutocompleteItem(link)
+    {
+        if (
+            link.dataset.preisLandoPriceReady
+            === "1"
+        )
+        {
+            return;
+        }
+
+        const ids =
+            getIdsFromAutocompleteUrl(
+                link.getAttribute("href")
+            );
+
+        if (!ids)
+        {
+            return;
+        }
+
+        link.dataset.preisLandoPriceReady =
+            "1";
+
+        const priceElement =
+            getOrCreatePriceElement(link);
+
+        priceElement.textContent = "";
+
+        loadVariationPrice(
+            ids.itemId,
+            ids.variationId
+        )
+            .then(function (price)
+            {
+                if (price)
+                {
+                    priceElement.textContent =
+                        price;
+                }
+            });
+    }
+
+
+    /* -----------------------------------------------------
+       ALLE SICHTBAREN TREFFER VORBEREITEN
+    ----------------------------------------------------- */
+
+    function initializeAutocompletePrices()
+    {
+        const links =
+            document.querySelectorAll(
+                ".autocomplete-suggestions " +
+                "a.autocomplete-suggestion"
+            );
+
+        links.forEach(
+            prepareAutocompleteItem
+        );
+    }
+
+
+    /* -----------------------------------------------------
+       AUTOCOMPLETE WIRD DYNAMISCH VON VUE GERENDERT
+       → MutationObserver
+    ----------------------------------------------------- */
+
+    const autocompleteObserver =
+        new MutationObserver(
+            function ()
+            {
+                initializeAutocompletePrices();
+            }
+        );
+
+
+    autocompleteObserver.observe(
+        document.body,
+        {
+            childList: true,
+            subtree: true
+        }
+    );
+
+
+    initializeAutocompletePrices();
+
+})();
 })();
 </script>

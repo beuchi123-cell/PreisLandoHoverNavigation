@@ -4,42 +4,69 @@ namespace PreisLandoHoverNavigation\Api\Resources;
 
 use Plenty\Plugin\Controller;
 use Plenty\Plugin\Http\Response;
-use Plenty\Plugin\Http\Request;
+use IO\Services\ItemSearch\Factories\VariationSearchFactory;
 
 class SearchPriceResource extends Controller
 {
-    /**
-     * @var Request
-     */
-    private $request;
-
     /**
      * @var Response
      */
     private $response;
 
+    /**
+     * @var VariationSearchFactory
+     */
+    private $searchFactory;
+
     public function __construct(
-        Request $request,
-        Response $response
+        Response $response,
+        VariationSearchFactory $searchFactory
     )
     {
-        $this->request = $request;
         $this->response = $response;
+        $this->searchFactory = $searchFactory;
     }
 
-    /**
-     * Test-Endpunkt für die Schnellsuche.
-     *
-     * @param int $variationId
-     */
     public function show(int $variationId)
     {
-        return $this->response->json(
-            [
-                'success'     => true,
-                'variationId' => $variationId,
-                'price'       => null
-            ]
-        );
+        try
+        {
+            /*
+             * Nur die gewünschte Variante suchen
+             */
+            $this->searchFactory
+                ->hasVariationId($variationId)
+                ->hasPriceForCustomer()
+                ->withPrices([]);
+
+            /*
+             * Suche ausführen
+             */
+            $result = $this->searchFactory->search();
+
+            /*
+             * Zunächst komplette Struktur zurückgeben.
+             * Damit sehen wir exakt, wo der Preis bei
+             * deiner plentyShop-Version liegt.
+             */
+            return $this->response->json(
+                [
+                    'success'     => true,
+                    'variationId' => $variationId,
+                    'result'      => $result
+                ]
+            );
+        }
+        catch (\Throwable $e)
+        {
+            return $this->response->json(
+                [
+                    'success' => false,
+                    'variationId' => $variationId,
+                    'error' => $e->getMessage()
+                ],
+                500
+            );
+        }
     }
 }

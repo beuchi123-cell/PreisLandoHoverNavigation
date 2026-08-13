@@ -365,39 +365,70 @@
        API: DIREKTE UNTERKATEGORIEN LADEN
        ===================================================== */
 
-    function fetchCategoryChildren(categoryId)
-    {
-        const url =
-            "/rest/io/categorytree/children" +
-            "?categoryId=" +
-            encodeURIComponent(categoryId) +
-            "&indexStart=0" +
-            "&maxCount=" +
-            MAX_CHILDREN;
+   function fetchCategoryChildren(categoryId)
+{
+    const url =
+        "/rest/io/categorytree/children" +
+        "?categoryId=" +
+        encodeURIComponent(categoryId) +
+        "&indexStart=0" +
+        "&maxCount=" +
+        MAX_CHILDREN;
 
-        return fetch(
-            url,
+    return fetch(
+        url,
+        {
+            credentials: "same-origin",
+            headers:
             {
-                credentials: "same-origin",
-                headers:
-                {
-                    "X-Requested-With":
-                        "XMLHttpRequest"
-                }
+                "X-Requested-With":
+                    "XMLHttpRequest"
             }
-        )
-            .then(function (response)
+        }
+    )
+        .then(function (response)
+        {
+            if (!response.ok)
             {
-                if (!response.ok)
-                {
-                    throw new Error(
-                        "HTTP " + response.status
-                    );
-                }
+                throw new Error(
+                    "HTTP " + response.status
+                );
+            }
 
-                return response.json();
-            });
-    }
+            return response.json();
+        })
+        .then(function (response)
+        {
+            /*
+             * Plenty liefert:
+             *
+             * {
+             *     events: [],
+             *     data: [...]
+             * }
+             *
+             * Wir brauchen nur das data-Array.
+             */
+            if (
+                response &&
+                Array.isArray(response.data)
+            )
+            {
+                return response.data;
+            }
+
+            /*
+             * Fallback, falls Plenty irgendwann
+             * direkt ein Array liefert.
+             */
+            if (Array.isArray(response))
+            {
+                return response;
+            }
+
+            return [];
+        });
+}
 
 
     function loadCategoryChildren(categoryId)

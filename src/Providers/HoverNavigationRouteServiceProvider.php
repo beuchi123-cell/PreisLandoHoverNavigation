@@ -8,10 +8,7 @@ use Plenty\Plugin\Routing\Router;
 
 class HoverNavigationRouteServiceProvider extends RouteServiceProvider
 {
-    public function map(
-        Router $router,
-        ApiRouter $api
-    ): void
+    public function map(Router $router, ApiRouter $api)
     {
         $api->version(
             ['v1'],

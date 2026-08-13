@@ -28,21 +28,12 @@ class SearchPriceResource extends Controller
     }
 
     /**
-     * Preis für einen Treffer der Schnellsuche zurückgeben.
+     * Test-Endpunkt für die Schnellsuche.
      *
      * @param int $variationId
-     * @return Response
      */
-    public function show(int $variationId): Response
+    public function show(int $variationId)
     {
-        /*
-         * Im ersten Schritt testen wir bewusst nur,
-         * ob unser eigener öffentlicher Plugin-Endpunkt
-         * korrekt funktioniert.
-         *
-         * Die eigentliche plentyShop-Preisermittlung
-         * kommt danach hinein.
-         */
         return $this->response->json(
             [
                 'success'     => true,

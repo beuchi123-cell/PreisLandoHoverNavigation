@@ -3,7 +3,6 @@
 {
     "use strict";
 
-
     /* =====================================================
        GRUNDEINSTELLUNGEN
        ===================================================== */
@@ -11,43 +10,16 @@
     const DESKTOP_BREAKPOINT = 1200;
     const MAX_CHILDREN = 100;
 
-    /*
-     * Kleine Verzögerung beim Öffnen verhindert,
-     * dass beim schnellen Überfahren sofort jedes
-     * Menü geöffnet wird.
-     */
     const HOVER_OPEN_DELAY = 120;
-
-    /*
-     * Wichtig für obere Navigationszeile:
-     *
-     * Menü wird beim Verlassen der Hauptkategorie
-     * NICHT sofort geschlossen.
-     */
     const HOVER_CLOSE_DELAY = 350;
 
-
-    window.PreisLandoHoverVersion = "1.1.2";
-
+    window.PreisLandoHoverVersion = "1.1.3";
 
     let hoverCloseTimer = null;
     let hoverOpenTimer = null;
-
-    /*
-     * Hauptkategorie, deren Menü aktuell aktiv ist.
-     */
     let activeHoverBox = null;
 
-
-    /* =====================================================
-       CACHE FÜR UNTERKATEGORIEN
-       ===================================================== */
-
     const childCache = {};
-
-    /*
-     * Verhindert parallele doppelte Requests.
-     */
     const childRequests = {};
 
 
@@ -130,10 +102,6 @@
                 "/" + url;
         }
 
-
-        /*
-         * Sprachpräfix berücksichtigen.
-         */
         if (
             typeof App !== "undefined" &&
             App.urls &&
@@ -181,13 +149,11 @@
             return "";
         }
 
-
         const details =
             category.details[0];
 
         const preferredSource =
             getImageSource();
-
 
         let imagePath =
             details[preferredSource] ||
@@ -195,16 +161,11 @@
             details.imagePath ||
             "";
 
-
         if (!imagePath)
         {
             return "";
         }
 
-
-        /*
-         * Bereits vollständige URL.
-         */
         if (
             imagePath.indexOf(
                 "https://"
@@ -217,17 +178,12 @@
             return imagePath;
         }
 
-
         imagePath =
             imagePath.replace(
                 /^\/+/,
                 ""
             );
 
-
-        /*
-         * documents/ bereits vorhanden.
-         */
         if (
             imagePath.indexOf(
                 "documents/"
@@ -236,7 +192,6 @@
         {
             return "/" + imagePath;
         }
-
 
         return "/documents/" +
             imagePath;
@@ -249,9 +204,6 @@
 
     function findNavigationStore(widget)
     {
-        /*
-         * Widget selbst prüfen.
-         */
         if (
             widget.__vue__ &&
             widget.__vue__.$store &&
@@ -262,13 +214,8 @@
             return widget.__vue__.$store;
         }
 
-
-        /*
-         * Alle Unterelemente prüfen.
-         */
         const elements =
             widget.querySelectorAll("*");
-
 
         for (const element of elements)
         {
@@ -283,7 +230,6 @@
             }
         }
 
-
         return null;
     }
 
@@ -292,7 +238,6 @@
     {
         const store =
             findNavigationStore(widget);
-
 
         if (
             store &&
@@ -305,7 +250,6 @@
         {
             return store.state.navigation.categoryChildren;
         }
-
 
         return [];
     }
@@ -323,22 +267,16 @@
         const categories =
             getLoadedMainCategories(widget);
 
-
         if (!categories.length)
         {
             return null;
         }
-
 
         const visiblePath =
             normalizePath(
                 link.href
             );
 
-
-        /*
-         * 1. Exakter URL-Vergleich
-         */
         for (const category of categories)
         {
             const categoryPath =
@@ -347,7 +285,6 @@
                         category
                     )
                 );
-
 
             if (
                 categoryPath &&
@@ -358,17 +295,12 @@
             }
         }
 
-
-        /*
-         * 2. URL ohne Sprachpräfix.
-         */
         for (const category of categories)
         {
             const categoryPath =
                 normalizePath(
                     category.url
                 );
-
 
             if (
                 categoryPath &&
@@ -381,10 +313,6 @@
             }
         }
 
-
-        /*
-         * 3. Fallback über Kategoriename.
-         */
         const visibleName =
             (
                 link.textContent ||
@@ -392,7 +320,6 @@
             )
                 .trim()
                 .toLowerCase();
-
 
         for (const category of categories)
         {
@@ -403,7 +330,6 @@
                     .trim()
                     .toLowerCase();
 
-
             if (
                 categoryName &&
                 categoryName === visibleName
@@ -413,14 +339,12 @@
             }
         }
 
-
         return null;
     }
 
 
     /* =====================================================
-       API:
-       DIREKTE UNTERKATEGORIEN LADEN
+       API: DIREKTE UNTERKATEGORIEN LADEN
        ===================================================== */
 
     function fetchCategoryChildren(
@@ -436,7 +360,6 @@
             "&indexStart=0" +
             "&maxCount=" +
             MAX_CHILDREN;
-
 
         return fetch(
             url,
@@ -468,14 +391,6 @@
             .then(
                 function (response)
                 {
-                    /*
-                     * Plenty:
-                     *
-                     * {
-                     *   events: [],
-                     *   data: [...]
-                     * }
-                     */
                     if (
                         response &&
                         Array.isArray(
@@ -486,10 +401,6 @@
                         return response.data;
                     }
 
-
-                    /*
-                     * Fallback.
-                     */
                     if (
                         Array.isArray(
                             response
@@ -498,7 +409,6 @@
                     {
                         return response;
                     }
-
 
                     return [];
                 }
@@ -510,9 +420,6 @@
         categoryId
     )
     {
-        /*
-         * Cache vorhanden.
-         */
         if (
             Object.prototype
                 .hasOwnProperty.call(
@@ -528,10 +435,6 @@
             );
         }
 
-
-        /*
-         * Request läuft bereits.
-         */
         if (
             childRequests[
                 categoryId
@@ -542,7 +445,6 @@
                 categoryId
             ];
         }
-
 
         childRequests[
             categoryId
@@ -561,7 +463,6 @@
                             )
                                 ? children
                                 : [];
-
 
                         return childCache[
                             categoryId
@@ -588,7 +489,6 @@
                         ];
                     }
                 );
-
 
         return childRequests[
             categoryId
@@ -629,6 +529,51 @@
 
 
     /* =====================================================
+       AKTIVE KATEGORIE MARKIEREN
+       ===================================================== */
+
+    function clearActiveCategory()
+    {
+        document
+            .querySelectorAll(
+                ".preis-lando-hover-parent"
+            )
+            .forEach(
+                function (entry)
+                {
+                    entry.classList.remove(
+                        "is-hover-active"
+                    );
+                }
+            );
+    }
+
+
+    function setActiveCategory(
+        widget,
+        box
+    )
+    {
+        widget
+            .querySelectorAll(
+                ".preis-lando-hover-parent"
+            )
+            .forEach(
+                function (entry)
+                {
+                    entry.classList.remove(
+                        "is-hover-active"
+                    );
+                }
+            );
+
+        box.classList.add(
+            "is-hover-active"
+        );
+    }
+
+
+    /* =====================================================
        ALLE HOVER-MENÜS SCHLIESSEN
        ===================================================== */
 
@@ -636,7 +581,6 @@
     {
         cancelHoverClose();
         cancelHoverOpen();
-
 
         document
             .querySelectorAll(
@@ -648,9 +592,14 @@
                     menu.classList.remove(
                         "is-visible"
                     );
+
+                    menu.classList.remove(
+                        "has-notch"
+                    );
                 }
             );
 
+        clearActiveCategory();
 
         activeHoverBox =
             null;
@@ -665,12 +614,10 @@
     {
         cancelHoverClose();
 
-
         if (!activeHoverBox)
         {
             return;
         }
-
 
         const menu =
             activeHoverBox
@@ -679,216 +626,177 @@
                     ".preis-lando-hover-menu"
                 );
 
-
         if (menu)
         {
             menu.classList.remove(
                 "is-visible"
             );
+
+            menu.classList.remove(
+                "has-notch"
+            );
         }
 
+        activeHoverBox.classList.remove(
+            "is-hover-active"
+        );
 
         activeHoverBox =
             null;
     }
 
 
-   
-
-
-/* =========================================================
-   MEGA-MENÜ POSITION BERECHNEN
-
-   obere Reihe:
-   Menü beginnt bereits auf Höhe der zweiten Reihe
-   und überdeckt diese.
-
-   aktive Kategorie bekommt eine Ausbuchtung.
-   ========================================================= */
-
-function positionMegaMenu(
-    widget,
-    box,
-    menu
-)
-{
-    const widgetRect =
-        widget.getBoundingClientRect();
-
-    const boxRect =
-        box.getBoundingClientRect();
-
-
-    /*
-     * Alle Hauptkategorien bestimmen.
-     */
-    const boxes =
-        Array.from(
-            widget.querySelectorAll(
-                ".row > div"
-            )
-        )
-            .filter(
-                function (entry)
-                {
-                    return !!entry.querySelector(
-                        ":scope > a"
-                    );
-                }
-            );
-
-
-    if (!boxes.length)
-    {
-        return;
-    }
-
-
-    /*
-     * Y-Positionen aller Reihen ermitteln.
-     */
-    const rowTops =
-        [];
-
-
-    boxes.forEach(
-        function (entry)
-        {
-            const top =
-                Math.round(
-                    entry
-                        .getBoundingClientRect()
-                        .top
-                );
-
-
-            if (
-                !rowTops.includes(top)
-            )
-            {
-                rowTops.push(top);
-            }
-        }
-    );
-
-
-    rowTops.sort(
-        function (a, b)
-        {
-            return a - b;
-        }
-    );
-
-
-    const currentTop =
-        Math.round(
-            boxRect.top
-        );
-
-
-    const currentRowIndex =
-        rowTops.indexOf(
-            currentTop
-        );
-
-
-    /*
-     * Menü über gesamte Breite des Kategorie-Widgets.
-     */
-    menu.style.setProperty(
-        "--pl-menu-left",
-        widgetRect.left + "px"
-    );
-
-
-    menu.style.setProperty(
-        "--pl-menu-width",
-        widgetRect.width + "px"
-    );
-
-
     /* =====================================================
-       OBERE REIHE
+       MEGA-MENÜ POSITION BERECHNEN
        ===================================================== */
 
-    if (
-        currentRowIndex === 0 &&
-        rowTops.length > 1
+    function positionMegaMenu(
+        widget,
+        box,
+        menu
     )
     {
-        /*
-         * Menü beginnt EXAKT dort,
-         * wo zweite Reihe beginnt.
-         *
-         * Dadurch wird nur die zweite Reihe
-         * vom Menü überlagert.
-         */
-        const secondRowTop =
-            rowTops[1];
+        const widgetRect =
+            widget.getBoundingClientRect();
 
+        const boxRect =
+            box.getBoundingClientRect();
 
-        menu.style.setProperty(
-            "--pl-menu-top",
-            secondRowTop + "px"
+        const boxes =
+            Array.from(
+                widget.querySelectorAll(
+                    ".row > div"
+                )
+            )
+                .filter(
+                    function (entry)
+                    {
+                        return !!entry.querySelector(
+                            ":scope > a"
+                        );
+                    }
+                );
+
+        if (!boxes.length)
+        {
+            return;
+        }
+
+        const rowTops =
+            [];
+
+        boxes.forEach(
+            function (entry)
+            {
+                const top =
+                    Math.round(
+                        entry
+                            .getBoundingClientRect()
+                            .top
+                    );
+
+                if (
+                    !rowTops.includes(
+                        top
+                    )
+                )
+                {
+                    rowTops.push(
+                        top
+                    );
+                }
+            }
         );
 
-
-        /*
-         * Ausbuchtung über aktive Kategorie.
-         */
-        menu.classList.add(
-            "has-notch"
+        rowTops.sort(
+            function (a, b)
+            {
+                return a - b;
+            }
         );
 
-
-        menu.style.setProperty(
-            "--pl-notch-left",
-            (
-                boxRect.left -
-                widgetRect.left
-            ) + "px"
-        );
-
-
-        menu.style.setProperty(
-            "--pl-notch-width",
-            boxRect.width + "px"
-        );
-
-
-        menu.style.setProperty(
-            "--pl-notch-height",
-            (
-                secondRowTop -
+        const currentTop =
+            Math.round(
                 boxRect.top
-            ) + "px"
+            );
+
+        const currentRowIndex =
+            rowTops.indexOf(
+                currentTop
+            );
+
+        menu.style.setProperty(
+            "--pl-menu-left",
+            widgetRect.left + "px"
         );
+
+        menu.style.setProperty(
+            "--pl-menu-width",
+            widgetRect.width + "px"
+        );
+
+        /* =================================================
+           OBERE REIHE
+           ================================================= */
+
+        if (
+            currentRowIndex === 0 &&
+            rowTops.length > 1
+        )
+        {
+            const secondRowTop =
+                rowTops[1];
+
+            menu.style.setProperty(
+                "--pl-menu-top",
+                secondRowTop + "px"
+            );
+
+            menu.classList.add(
+                "has-notch"
+            );
+
+            menu.style.setProperty(
+                "--pl-notch-left",
+                (
+                    boxRect.left -
+                    widgetRect.left
+                ) + "px"
+            );
+
+            menu.style.setProperty(
+                "--pl-notch-width",
+                boxRect.width + "px"
+            );
+
+            menu.style.setProperty(
+                "--pl-notch-height",
+                (
+                    secondRowTop -
+                    boxRect.top
+                ) + "px"
+            );
+        }
+
+        /* =================================================
+           UNTERE REIHE
+           ================================================= */
+
+        else
+        {
+            menu.classList.remove(
+                "has-notch"
+            );
+
+            menu.style.setProperty(
+                "--pl-menu-top",
+                boxRect.bottom + "px"
+            );
+        }
     }
+
 
     /* =====================================================
-       UNTERE REIHE
-       ===================================================== */
-
-    else
-    {
-        /*
-         * Untere Kategorie:
-         * Menü normal darunter.
-         */
-        menu.classList.remove(
-            "has-notch"
-        );
-
-
-        menu.style.setProperty(
-            "--pl-menu-top",
-            boxRect.bottom + "px"
-        );
-    }
-}
-
-
-/* =====================================================
        MEGA-MENÜ ERZEUGEN
        ===================================================== */
 
@@ -900,18 +808,15 @@ function positionMegaMenu(
                 ".preis-lando-hover-menu"
             );
 
-
         if (menu)
         {
             return menu;
         }
 
-
         menu =
             document.createElement(
                 "div"
             );
-
 
         menu.className =
             "preis-lando-hover-menu";
@@ -926,10 +831,8 @@ function positionMegaMenu(
                 "button"
             );
 
-
         closeButton.type =
             "button";
-
 
         closeButton.className =
             "preis-lando-hover-close";
@@ -940,7 +843,6 @@ function positionMegaMenu(
                 "span"
             );
 
-
         closeText.textContent =
             "Schließen";
 
@@ -950,10 +852,8 @@ function positionMegaMenu(
                 "span"
             );
 
-
         closeX.className =
             "preis-lando-hover-close-x";
-
 
         closeX.textContent =
             "×";
@@ -962,7 +862,6 @@ function positionMegaMenu(
         closeButton.appendChild(
             closeText
         );
-
 
         closeButton.appendChild(
             closeX
@@ -995,20 +894,18 @@ function positionMegaMenu(
                 "div"
             );
 
-
         content.className =
             "preis-lando-hover-content";
-
 
         menu.appendChild(
             content
         );
 
 
-        /*
-         * Menü bleibt offen,
-         * sobald Maus das Mega-Menü erreicht.
-         */
+        /* -------------------------------------------------
+           MENÜ BETRETEN
+           ------------------------------------------------- */
+
         menu.addEventListener(
             "mouseenter",
             function ()
@@ -1021,15 +918,15 @@ function positionMegaMenu(
         );
 
 
-        /*
-         * Erst mit Verzögerung schließen.
-         */
+        /* -------------------------------------------------
+           MENÜ VERLASSEN
+           ------------------------------------------------- */
+
         menu.addEventListener(
             "mouseleave",
             function ()
             {
                 cancelHoverClose();
-
 
                 hoverCloseTimer =
                     setTimeout(
@@ -1053,7 +950,6 @@ function positionMegaMenu(
             menu
         );
 
-
         return menu;
     }
 
@@ -1069,45 +965,36 @@ function positionMegaMenu(
                 ".preis-lando-hover-content"
             );
 
-
         if (!content)
         {
             return;
         }
 
-
         content.innerHTML =
             "";
-
 
         menu.classList.remove(
             "is-empty"
         );
 
-
         menu.classList.add(
             "is-loading"
         );
 
-
         menu.classList.add(
             "is-visible"
         );
-
 
         const loading =
             document.createElement(
                 "div"
             );
 
-
         loading.className =
             "preis-lando-hover-loading";
 
-
         loading.textContent =
             "Kategorien werden geladen …";
-
 
         content.appendChild(
             loading
@@ -1129,25 +1016,18 @@ function positionMegaMenu(
                 ".preis-lando-hover-content"
             );
 
-
         if (!content)
         {
             return;
         }
 
-
         content.innerHTML =
             "";
-
 
         menu.classList.remove(
             "is-loading"
         );
 
-
-        /*
-         * Keine Kinder.
-         */
         if (
             !children ||
             !children.length
@@ -1157,20 +1037,16 @@ function positionMegaMenu(
                 "is-empty"
             );
 
-
             menu.classList.remove(
                 "is-visible"
             );
 
-
             return;
         }
-
 
         menu.classList.remove(
             "is-empty"
         );
-
 
         for (
             const category
@@ -1182,10 +1058,8 @@ function positionMegaMenu(
                     "a"
                 );
 
-
             item.className =
                 "preis-lando-hover-item";
-
 
             item.href =
                 getCategoryUrl(
@@ -1202,7 +1076,6 @@ function positionMegaMenu(
                     category
                 );
 
-
             if (imageUrl)
             {
                 const image =
@@ -1210,24 +1083,19 @@ function positionMegaMenu(
                         "img"
                     );
 
-
                 image.className =
                     "preis-lando-hover-image";
 
-
                 image.src =
                     imageUrl;
-
 
                 image.alt =
                     getCategoryName(
                         category
                     );
 
-
                 image.loading =
                     "lazy";
-
 
                 item.appendChild(
                     image
@@ -1240,11 +1108,9 @@ function positionMegaMenu(
                         "span"
                     );
 
-
                 placeholder.className =
                     "preis-lando-hover-image " +
                     "preis-lando-hover-image-empty";
-
 
                 item.appendChild(
                     placeholder
@@ -1253,7 +1119,7 @@ function positionMegaMenu(
 
 
             /* ---------------------------------------------
-               NAME
+               TEXT
                --------------------------------------------- */
 
             const text =
@@ -1261,27 +1127,22 @@ function positionMegaMenu(
                     "span"
                 );
 
-
             text.className =
                 "preis-lando-hover-text";
-
 
             text.textContent =
                 getCategoryName(
                     category
                 );
 
-
             item.appendChild(
                 text
             );
-
 
             content.appendChild(
                 item
             );
         }
-
 
         menu.classList.add(
             "is-visible"
@@ -1298,9 +1159,6 @@ function positionMegaMenu(
         box
     )
     {
-        /*
-         * Schon vorbereitet.
-         */
         if (
             box.dataset
                 .preisLandoHoverReady
@@ -1310,23 +1168,19 @@ function positionMegaMenu(
             return;
         }
 
-
         const link =
             box.querySelector(
                 ":scope > a"
             );
-
 
         if (!link)
         {
             return;
         }
 
-
         box.dataset
             .preisLandoHoverReady =
             "1";
-
 
         box.classList.add(
             "preis-lando-hover-parent"
@@ -1344,16 +1198,13 @@ function positionMegaMenu(
                 return;
             }
 
-
             cancelHoverClose();
-
 
             const category =
                 findCategoryForLink(
                     widget,
                     link
                 );
-
 
             if (
                 !category ||
@@ -1369,10 +1220,6 @@ function positionMegaMenu(
                 return;
             }
 
-
-            /*
-             * Vorheriges Menü schließen.
-             */
             if (
                 activeHoverBox &&
                 activeHoverBox !== box
@@ -1385,29 +1232,48 @@ function positionMegaMenu(
                             ".preis-lando-hover-menu"
                         );
 
-
                 if (oldMenu)
                 {
                     oldMenu.classList.remove(
                         "is-visible"
                     );
-                }
-            }
 
+                    oldMenu.classList.remove(
+                        "has-notch"
+                    );
+                }
+
+                activeHoverBox
+                    .classList
+                    .remove(
+                        "is-hover-active"
+                    );
+            }
 
             activeHoverBox =
                 box;
 
+            setActiveCategory(
+                widget,
+                box
+            );
 
             const menu =
                 getOrCreateMenu(
                     box
                 );
 
+            positionMegaMenu(
+                widget,
+                box,
+                menu
+            );
 
-            /*
-             * Bereits geladen.
-             */
+
+            /* ---------------------------------------------
+               BEREITS GELADEN
+               --------------------------------------------- */
+
             if (
                 menu.dataset.loaded
                 === "1"
@@ -1429,6 +1295,10 @@ function positionMegaMenu(
             }
 
 
+            /* ---------------------------------------------
+               LADEN
+               --------------------------------------------- */
+
             showLoading(
                 menu
             );
@@ -1443,17 +1313,11 @@ function positionMegaMenu(
                         menu.dataset.loaded =
                             "1";
 
-
                         renderChildren(
                             menu,
                             children
                         );
 
-
-                        /*
-                         * Während Request wurde
-                         * schon andere Kategorie geöffnet.
-                         */
                         if (
                             activeHoverBox
                             !== box
@@ -1481,10 +1345,8 @@ function positionMegaMenu(
                     return;
                 }
 
-
                 cancelHoverClose();
                 cancelHoverOpen();
-
 
                 hoverOpenTimer =
                     setTimeout(
@@ -1511,7 +1373,6 @@ function positionMegaMenu(
             {
                 cancelHoverOpen();
                 cancelHoverClose();
-
 
                 hoverCloseTimer =
                     setTimeout(
@@ -1543,27 +1404,20 @@ function positionMegaMenu(
             return;
         }
 
-
         const widget =
             document.querySelector(
                 ".kategorie-11-spalten"
             );
-
 
         if (!widget)
         {
             return;
         }
 
-
-        /*
-         * Nur echte Kategorie-Kacheln.
-         */
         const boxes =
             widget.querySelectorAll(
                 ".row > div"
             );
-
 
         boxes.forEach(
             function (box)
@@ -1592,10 +1446,6 @@ function positionMegaMenu(
     {
         initializeHoverNavigation();
 
-
-        /*
-         * plentyShop rendert Kategorien über Vue.
-         */
         const observer =
             new MutationObserver(
                 function ()
@@ -1607,7 +1457,6 @@ function positionMegaMenu(
                 }
             );
 
-
         observer.observe(
             document.body,
             {
@@ -1616,14 +1465,8 @@ function positionMegaMenu(
             }
         );
 
-
-        /* ---------------------------------------------
-           DESKTOP / MOBILE WECHSEL
-           --------------------------------------------- */
-
         let resizeTimer =
             null;
-
 
         window.addEventListener(
             "resize",
@@ -1632,7 +1475,6 @@ function positionMegaMenu(
                 clearTimeout(
                     resizeTimer
                 );
-
 
                 resizeTimer =
                     setTimeout(
@@ -1655,10 +1497,6 @@ function positionMegaMenu(
         );
     }
 
-
-    /* =====================================================
-       START NACH DOM
-       ===================================================== */
 
     if (
         document.readyState
@@ -1689,13 +1527,6 @@ function positionMegaMenu(
             {};
 
 
-        /* -------------------------------------------------
-           ITEM-ID + VARIANTEN-ID AUS URL
-
-           /artikelname_28029_40021/
-                        ^^^^^ ^^^^^
-           ------------------------------------------------- */
-
         function getIdsFromAutocompleteUrl(
             url
         )
@@ -1705,7 +1536,6 @@ function positionMegaMenu(
                 return null;
             }
 
-
             const cleanUrl =
                 String(url)
                     .split("?")[0]
@@ -1714,18 +1544,15 @@ function positionMegaMenu(
                         ""
                     );
 
-
             const match =
                 cleanUrl.match(
                     /_(\d+)_(\d+)$/
                 );
 
-
             if (!match)
             {
                 return null;
             }
-
 
             return {
                 itemId:
@@ -1743,10 +1570,6 @@ function positionMegaMenu(
         }
 
 
-        /* -------------------------------------------------
-           PREIS LADEN
-           ------------------------------------------------- */
-
         function loadVariationPrice(
             itemId,
             variationId
@@ -1757,10 +1580,6 @@ function positionMegaMenu(
                 "_" +
                 variationId;
 
-
-            /*
-             * Bereits gecacht.
-             */
             if (
                 Object.prototype
                     .hasOwnProperty.call(
@@ -1776,10 +1595,6 @@ function positionMegaMenu(
                 );
             }
 
-
-            /*
-             * Request läuft bereits.
-             */
             if (
                 pendingPrices[
                     cacheKey
@@ -1791,13 +1606,11 @@ function positionMegaMenu(
                 ];
             }
 
-
             const url =
                 "/rest/preislando/search-price/" +
                 encodeURIComponent(
                     variationId
                 );
-
 
             pendingPrices[
                 cacheKey
@@ -1826,7 +1639,6 @@ function positionMegaMenu(
                                 );
                             }
 
-
                             return response.json();
                         }
                     )
@@ -1840,12 +1652,10 @@ function positionMegaMenu(
                                     ? data.price
                                     : "";
 
-
                             priceCache[
                                 cacheKey
                             ] =
                                 price;
-
 
                             return price;
                         }
@@ -1861,12 +1671,10 @@ function positionMegaMenu(
                                 error
                             );
 
-
                             priceCache[
                                 cacheKey
                             ] =
                                 "";
-
 
                             return "";
                         }
@@ -1880,16 +1688,11 @@ function positionMegaMenu(
                         }
                     );
 
-
             return pendingPrices[
                 cacheKey
             ];
         }
 
-
-        /* -------------------------------------------------
-           PREIS-ELEMENT ANLEGEN
-           ------------------------------------------------- */
 
         function getOrCreatePriceElement(
             link
@@ -1901,35 +1704,26 @@ function positionMegaMenu(
                     ".preis-lando-search-price"
                 );
 
-
             if (price)
             {
                 return price;
             }
-
 
             price =
                 document.createElement(
                     "span"
                 );
 
-
             price.className =
                 "preis-lando-search-price";
-
 
             link.appendChild(
                 price
             );
 
-
             return price;
         }
 
-
-        /* -------------------------------------------------
-           EINEN SUCHTREFFER VORBEREITEN
-           ------------------------------------------------- */
 
         function prepareAutocompleteItem(
             link
@@ -1944,7 +1738,6 @@ function positionMegaMenu(
                 return;
             }
 
-
             const ids =
                 getIdsFromAutocompleteUrl(
                     link.getAttribute(
@@ -1952,27 +1745,22 @@ function positionMegaMenu(
                     )
                 );
 
-
             if (!ids)
             {
                 return;
             }
 
-
             link.dataset
                 .preisLandoPriceReady =
                 "1";
-
 
             const priceElement =
                 getOrCreatePriceElement(
                     link
                 );
 
-
             priceElement.textContent =
                 "";
-
 
             loadVariationPrice(
                 ids.itemId,
@@ -1991,10 +1779,6 @@ function positionMegaMenu(
         }
 
 
-        /* -------------------------------------------------
-           ALLE SICHTBAREN SUCHTREFFER
-           ------------------------------------------------- */
-
         function initializeAutocompletePrices()
         {
             const links =
@@ -2003,16 +1787,11 @@ function positionMegaMenu(
                     "a.autocomplete-suggestion"
                 );
 
-
             links.forEach(
                 prepareAutocompleteItem
             );
         }
 
-
-        /* -------------------------------------------------
-           AUTOCOMPLETE WIRD DYNAMISCH GERENDERT
-           ------------------------------------------------- */
 
         const autocompleteObserver =
             new MutationObserver(
@@ -2022,7 +1801,6 @@ function positionMegaMenu(
                 }
             );
 
-
         autocompleteObserver.observe(
             document.body,
             {
@@ -2030,7 +1808,6 @@ function positionMegaMenu(
                 subtree: true
             }
         );
-
 
         initializeAutocompletePrices();
 

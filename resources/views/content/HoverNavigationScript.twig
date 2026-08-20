@@ -1652,7 +1652,103 @@
         );
     }
 
+/* =========================================================
+   KATEGORIEBILDER IM HINTERGRUND VORLADEN
+   ========================================================= */
 
+function preloadHoverImages(widget)
+{
+    if (!isDesktop())
+    {
+        return;
+    }
+
+    const categories =
+        getLoadedMainCategories(
+            widget
+        );
+
+    if (!categories.length)
+    {
+        return;
+    }
+
+    categories.forEach(
+        function (mainCategory)
+        {
+            if (
+                !mainCategory ||
+                !mainCategory.id
+            )
+            {
+                return;
+            }
+
+            loadCategoryChildren(
+                mainCategory.id
+            )
+                .then(
+                    function (children)
+                    {
+                        if (
+                            !Array.isArray(
+                                children
+                            )
+                        )
+                        {
+                            return;
+                        }
+
+                        children.forEach(
+                            function (child)
+                            {
+                                /*
+                                 * Hat die Kategorie bereits
+                                 * ein echtes Kategorie-Bild,
+                                 * brauchen wir keinen Fallback.
+                                 */
+                                if (
+                                    getCategoryImage(
+                                        child
+                                    )
+                                )
+                                {
+                                    return;
+                                }
+
+                                /*
+                                 * Fallback-Bild schon jetzt
+                                 * im Hintergrund laden.
+                                 */
+                                loadFallbackCategoryImage(
+                                    child
+                                )
+                                    .then(
+                                        function (imageUrl)
+                                        {
+                                            if (!imageUrl)
+                                            {
+                                                return;
+                                            }
+
+                                            /*
+                                             * Zusätzlich Browser-Cache
+                                             * mit dem echten Bild füllen.
+                                             */
+                                            const img =
+                                                new Image();
+
+                                            img.src =
+                                                imageUrl;
+                                        }
+                                    );
+                            }
+                        );
+                    }
+                );
+        }
+    );
+}
     /* =====================================================
        START
        ===================================================== */

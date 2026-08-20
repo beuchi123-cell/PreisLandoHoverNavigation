@@ -650,151 +650,171 @@
        MEGA-MENÜ POSITION BERECHNEN
        ===================================================== */
 
-    function positionMegaMenu(
-        widget,
-        box,
-        menu
-    )
-    {
-        const widgetRect =
-            widget.getBoundingClientRect();
+function positionMegaMenu(
+    widget,
+    box,
+    menu
+)
+{
+    const widgetRect =
+        widget.getBoundingClientRect();
 
-        const boxRect =
-            box.getBoundingClientRect();
+    const boxRect =
+        box.getBoundingClientRect();
 
-        const boxes =
-            Array.from(
-                widget.querySelectorAll(
-                    ".row > div"
-                )
+
+    const boxes =
+        Array.from(
+            widget.querySelectorAll(
+                ".row > div"
             )
-                .filter(
-                    function (entry)
-                    {
-                        return !!entry.querySelector(
-                            ":scope > a"
-                        );
-                    }
-                );
-
-        if (!boxes.length)
-        {
-            return;
-        }
-
-        const rowTops =
-            [];
-
-        boxes.forEach(
+        )
+        .filter(
             function (entry)
             {
-                const top =
-                    Math.round(
-                        entry
-                            .getBoundingClientRect()
-                            .top
-                    );
-
-                if (
-                    !rowTops.includes(
-                        top
-                    )
-                )
-                {
-                    rowTops.push(
-                        top
-                    );
-                }
+                return !!entry.querySelector(
+                    ":scope > a"
+                );
             }
         );
 
-        rowTops.sort(
-            function (a, b)
-            {
-                return a - b;
-            }
-        );
 
-        const currentTop =
-            Math.round(
-                boxRect.top
-            );
-
-        const currentRowIndex =
-            rowTops.indexOf(
-                currentTop
-            );
-
-        menu.style.setProperty(
-            "--pl-menu-left",
-            widgetRect.left + "px"
-        );
-
-        menu.style.setProperty(
-            "--pl-menu-width",
-            widgetRect.width + "px"
-        );
-
-        /* =================================================
-           OBERE REIHE
-           ================================================= */
-
-        if (
-            currentRowIndex === 0 &&
-            rowTops.length > 1
-        )
-        {
-            const secondRowTop =
-                rowTops[1];
-
-            menu.style.setProperty(
-                "--pl-menu-top",
-                secondRowTop + "px"
-            );
-
-            menu.classList.add(
-                "has-notch"
-            );
-
-            menu.style.setProperty(
-                "--pl-notch-left",
-                (
-                    boxRect.left -
-                    widgetRect.left
-                ) + "px"
-            );
-
-            menu.style.setProperty(
-                "--pl-notch-width",
-                boxRect.width + "px"
-            );
-
-            menu.style.setProperty(
-                "--pl-notch-height",
-                (
-                    secondRowTop -
-                    boxRect.top
-                ) + "px"
-            );
-        }
-
-        /* =================================================
-           UNTERE REIHE
-           ================================================= */
-
-        else
-        {
-            menu.classList.remove(
-                "has-notch"
-            );
-
-            menu.style.setProperty(
-                "--pl-menu-top",
-                boxRect.bottom + "px"
-            );
-        }
+    if (!boxes.length)
+    {
+        return;
     }
 
+
+    /* =====================================================
+       REIHEN ERMITTELN
+       ===================================================== */
+
+    const rowTops = [];
+
+
+    boxes.forEach(
+        function (entry)
+        {
+            const top =
+                Math.round(
+                    entry
+                        .getBoundingClientRect()
+                        .top
+                );
+
+
+            if (!rowTops.includes(top))
+            {
+                rowTops.push(top);
+            }
+        }
+    );
+
+
+    rowTops.sort(
+        function (a, b)
+        {
+            return a - b;
+        }
+    );
+
+
+    const currentTop =
+        Math.round(
+            boxRect.top
+        );
+
+
+    const currentRowIndex =
+        rowTops.indexOf(
+            currentTop
+        );
+
+
+    /* =====================================================
+       OBERE REIHE
+       ===================================================== */
+
+    if (
+        currentRowIndex === 0 &&
+        rowTops.length > 1
+    )
+    {
+        const secondRowTop =
+            rowTops[1];
+
+
+        /*
+         * WICHTIG:
+         * absolute Position relativ zum Kategorien-Widget.
+         */
+        const menuTop =
+            secondRowTop -
+            widgetRect.top;
+
+
+        menu.style.setProperty(
+            "--pl-menu-top",
+            menuTop + "px"
+        );
+
+
+        menu.classList.add(
+            "has-notch"
+        );
+
+
+        /* =================================================
+           AUSBUCHTUNG
+           ================================================= */
+
+        menu.style.setProperty(
+            "--pl-notch-left",
+            (
+                boxRect.left -
+                widgetRect.left
+            ) + "px"
+        );
+
+
+        menu.style.setProperty(
+            "--pl-notch-width",
+            boxRect.width + "px"
+        );
+
+
+        menu.style.setProperty(
+            "--pl-notch-height",
+            (
+                secondRowTop -
+                boxRect.top
+            ) + "px"
+        );
+    }
+
+
+    /* =====================================================
+       UNTERE REIHE
+       ===================================================== */
+
+    else
+    {
+        menu.classList.remove(
+            "has-notch"
+        );
+
+
+        const menuTop =
+            boxRect.bottom -
+            widgetRect.top;
+
+
+        menu.style.setProperty(
+            "--pl-menu-top",
+            menuTop + "px"
+        );
+    }
+}
 
     /* =====================================================
        MEGA-MENÜ ERZEUGEN

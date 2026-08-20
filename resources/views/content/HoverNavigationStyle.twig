@@ -34,21 +34,36 @@
 
     /* aktive Kachel wie Tab hervorheben */
     .kategorie-11-spalten
-    .preis-lando-hover-parent.is-hover-active
-    > a
-    .nav-item {
+   .kategorie-11-spalten
+.preis-lando-hover-parent.is-hover-active
+> a
+.nav-item {
 
-        position: relative !important;
+    position: relative !important;
 
-        background: #f1f1f1 !important;
+    background: #fff !important;
 
-        border-left: 1px solid #d5d5d5 !important;
-        border-right: 1px solid #d5d5d5 !important;
-        border-top: 1px solid #d5d5d5 !important;
+    border-top: 1px solid #d5d5d5 !important;
+    border-left: 1px solid #d5d5d5 !important;
+    border-right: 1px solid #d5d5d5 !important;
 
-        z-index: 20003 !important;
-    }
+    /*
+     * unten keine Linie:
+     * dadurch wirkt Hauptkategorie + Ausbuchtung
+     * wie ein zusammenhängendes Element
+     */
+    border-bottom: 0 !important;
 
+    z-index: 20003 !important;
+
+    box-sizing: border-box !important;
+}
+.kategorie-11-spalten
+.preis-lando-hover-parent.is-hover-active
+> a {
+    position: relative !important;
+    z-index: 20004 !important;
+}
 
     /* =====================================================
        MEGA-MENÜ
@@ -156,32 +171,7 @@ min-width: 100% !important;
      * Kleine weiße Linie unten entfernen,
      * damit Tab und grauer Bereich zusammenhängen.
      */
-    .preis-lando-hover-menu.has-notch::after {
-        content: "";
-
-        position: absolute !important;
-
-        left:
-            calc(
-                var(--pl-notch-left, 0px)
-                + 1px
-            ) !important;
-
-        top: -2px !important;
-
-        width:
-            calc(
-                var(--pl-notch-width, 100px)
-                - 2px
-            ) !important;
-
-        height: 4px !important;
-
-        background: #f1f1f1 !important;
-
-        z-index: 2 !important;
-    }
-
+   
 
     /* =====================================================
        SCHLIESSEN

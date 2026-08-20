@@ -107,43 +107,49 @@ min-width: 100% !important;
        AUSBUCHTUNG / TAB NACH OBEN
        ===================================================== */
 
-    .preis-lando-hover-menu.has-notch::before {
-        content: "";
+   .preis-lando-hover-menu.has-notch::before {
+    content: "";
 
-        position: absolute !important;
+    position: absolute !important;
 
-        left: var(--pl-notch-left, 0px) !important;
+    /*
+     * Exakt unter der aktiven Hauptkategorie
+     */
+    left: var(--pl-notch-left, 0px) !important;
 
-        top:
-            calc(
-                -1 *
-                var(--pl-notch-height, 30px)
-            ) !important;
+    top:
+        calc(
+            -1 * var(--pl-notch-height, 30px)
+        ) !important;
 
-        width:
-            var(--pl-notch-width, 100px) !important;
+    width:
+        var(--pl-notch-width, 100px) !important;
 
-        height:
-            calc(
-                var(--pl-notch-height, 30px)
-                + 2px
-            ) !important;
+    height:
+        calc(
+            var(--pl-notch-height, 30px)
+            + 2px
+        ) !important;
 
-        background: #f1f1f1 !important;
+    /*
+     * Damit wird Weihnachtsshop verdeckt
+     */
+    background: #f1f1f1 !important;
 
-        border-left:
-            1px solid #d5d5d5 !important;
+    border-left: 1px solid #d5d5d5 !important;
+    border-right: 1px solid #d5d5d5 !important;
 
-        border-right:
-            1px solid #d5d5d5 !important;
+    box-sizing: border-box !important;
 
-        border-top:
-            1px solid #d5d5d5 !important;
+    /*
+     * WICHTIG:
+     * vorher -1, dadurch lag die Ausbuchtung
+     * HINTER Weihnachtsshop.
+     */
+    z-index: 20001 !important;
 
-        box-sizing: border-box !important;
-
-        z-index: -1 !important;
-    }
+    pointer-events: auto !important;
+}
 
 
     /*

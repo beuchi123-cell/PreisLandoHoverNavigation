@@ -440,5 +440,32 @@
         display: none !important;
     }
 }
+/* =========================================================
+   FINALE ANPASSUNGEN
+   ========================================================= */
+@media (min-width: 1200px) {
 
+    /* Kategorieübersicht 20px schmaler */
+    .kategorie-11-spalten .row {
+        width: calc(100% - 20px) !important;
+        max-width: calc(100% - 20px) !important;
+        margin-left: 0 !important;
+        margin-right: 20px !important;
+    }
+
+    /* Aktiver Kategorie-Hoverkasten 1px höher */
+    .kategorie-11-spalten
+    .preis-lando-hover-parent.is-hover-active
+    > a
+    .nav-item {
+        height: 29px !important;
+        min-height: 29px !important;
+    }
+
+    /* Ausbuchtung links 6px kleiner */
+    .preis-lando-hover-menu.has-notch::before {
+        left: calc(var(--pl-notch-left, 0px) + 6px) !important;
+        width: calc(var(--pl-notch-width, 100px) - 6px) !important;
+    }
+}
 </style>

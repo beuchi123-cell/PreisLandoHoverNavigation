@@ -1756,6 +1756,27 @@ function preloadHoverImages(widget)
     function start()
     {
         initializeHoverNavigation();
+    const widget =
+        document.querySelector(
+            ".kategorie-11-spalten"
+        );
+
+    if (widget)
+    {
+        /*
+         * Nicht sofort alles gleichzeitig laden.
+         * Erst wenn die Seite grundsätzlich fertig ist.
+         */
+        setTimeout(
+            function ()
+            {
+                preloadHoverImages(
+                    widget
+                );
+            },
+            1500
+        );
+    }
 
         const observer =
             new MutationObserver(

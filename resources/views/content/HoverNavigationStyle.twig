@@ -6,7 +6,10 @@
 
 @media (min-width: 1200px) {
 
-    /* Gesamte Navigation = Bezugspunkt */
+    /* =====================================================
+       NAVIGATION / BEZUGSPUNKT
+       ===================================================== */
+
     .kategorie-11-spalten {
         position: relative !important;
         overflow: visible !important;
@@ -17,72 +20,89 @@
         overflow: visible !important;
     }
 
-
     /* Hauptkategorien */
     .kategorie-11-spalten
-.preis-lando-hover-parent {
-    position: static !important;
-    overflow: visible !important;
-}
+    .preis-lando-hover-parent {
+        position: static !important;
+        overflow: visible !important;
+    }
 
-    /* aktive Hauptkategorie über Mega-Menü halten */
+    /* Aktive Hauptkategorie über Mega-Menü halten */
     .kategorie-11-spalten
     .preis-lando-hover-parent.is-hover-active {
         z-index: 20002 !important;
     }
 
-
-    /* aktive Kachel wie Tab hervorheben */
     .kategorie-11-spalten
-   .kategorie-11-spalten
-.preis-lando-hover-parent.is-hover-active
-> a
-.nav-item {
+    .preis-lando-hover-parent.is-hover-active
+    > a {
+        position: relative !important;
+        z-index: 20004 !important;
+    }
 
-    position: relative !important;
 
-    background: #fff !important;
+    /* =====================================================
+       AKTIVE HAUPTKATEGORIE GRAU
+       ===================================================== */
 
-    border-top: 1px solid #d5d5d5 !important;
-    border-left: 1px solid #d5d5d5 !important;
-    border-right: 1px solid #d5d5d5 !important;
+    .kategorie-11-spalten
+    .preis-lando-hover-parent.is-hover-active
+    > a
+    .nav-item {
 
-    /*
-     * unten keine Linie:
-     * dadurch wirkt Hauptkategorie + Ausbuchtung
-     * wie ein zusammenhängendes Element
-     */
-    border-bottom: 0 !important;
+        position: relative !important;
 
-    z-index: 20003 !important;
+        background: #f1f1f1 !important;
 
-    box-sizing: border-box !important;
-}
-.kategorie-11-spalten
-.preis-lando-hover-parent.is-hover-active
-> a {
-    position: relative !important;
-    z-index: 20004 !important;
-}
+        border-top: 1px solid #d5d5d5 !important;
+        border-left: 1px solid #d5d5d5 !important;
+        border-right: 1px solid #d5d5d5 !important;
+        border-bottom: 0 !important;
+
+        box-sizing: border-box !important;
+
+        z-index: 20003 !important;
+    }
+
+    .kategorie-11-spalten
+    .preis-lando-hover-parent.is-hover-active
+    > a
+    .nav-text {
+
+        background: #f1f1f1 !important;
+    }
+
 
     /* =====================================================
        MEGA-MENÜ
        ===================================================== */
 
     .preis-lando-hover-menu {
+
         display: none;
 
+        position: absolute !important;
+
         /*
-         * WICHTIG:
-         * JS setzt top/left/width passend zum Widget.
+         * FESTE POSITION:
+         * Dadurch öffnen obere UND untere Menüzeile
+         * auf derselben Höhe.
          */
-       position: absolute !important;
+        top: 30px !important;
 
-left: 0 !important;
-top: var(--pl-menu-top, 0px) !important;
+        left: 0 !important;
 
-width: 100% !important;
-min-width: 100% !important;
+        /*
+         * Unsere aktuell getestete Position:
+         *
+         * -19px = nach links
+         *  28px = nach unten
+         */
+        transform:
+            translate(-19px, 28px) !important;
+
+        width: 100% !important;
+        min-width: 100% !important;
 
         margin: 0 !important;
 
@@ -108,10 +128,14 @@ min-width: 100% !important;
     }
 
 
+    /* Menü sichtbar */
+
     .preis-lando-hover-menu.is-visible {
         display: block !important;
     }
 
+
+    /* Keine Unterkategorien */
 
     .preis-lando-hover-menu.is-empty {
         display: none !important;
@@ -119,65 +143,74 @@ min-width: 100% !important;
 
 
     /* =====================================================
-       AUSBUCHTUNG / TAB NACH OBEN
+       AUSBUCHTUNG NACH OBEN
+
+       WICHTIG:
+       Das gesamte Mega-Menü wird 19px nach links
+       verschoben.
+
+       Deshalb bekommt die Ausbuchtung +19px,
+       damit sie trotzdem exakt unter der aktiven
+       Hauptkategorie sitzt.
        ===================================================== */
 
-   .preis-lando-hover-menu.has-notch::before {
-    content: "";
+    .preis-lando-hover-menu.has-notch::before {
 
-    position: absolute !important;
+        content: "";
 
-    /*
-     * Exakt unter der aktiven Hauptkategorie
-     */
-    left: var(--pl-notch-left, 0px) !important;
+        position: absolute !important;
 
-    top:
-        calc(
-            -1 * var(--pl-notch-height, 30px)
-        ) !important;
+        left:
+            calc(
+                var(--pl-notch-left, 0px)
+                + 19px
+            ) !important;
 
-    width:
-        var(--pl-notch-width, 100px) !important;
+        top:
+            calc(
+                -1 *
+                var(--pl-notch-height, 30px)
+            ) !important;
 
-    height:
-        calc(
-            var(--pl-notch-height, 30px)
-            + 2px
-        ) !important;
+        width:
+            var(
+                --pl-notch-width,
+                100px
+            ) !important;
 
-    /*
-     * Damit wird Weihnachtsshop verdeckt
-     */
-    background: #f1f1f1 !important;
+        height:
+            calc(
+                var(--pl-notch-height, 30px)
+                + 2px
+            ) !important;
 
-    border-left: 1px solid #d5d5d5 !important;
-    border-right: 1px solid #d5d5d5 !important;
+        /*
+         * Gleiche Farbe wie Mega-Menü.
+         * Dadurch wird die Kategorie darunter
+         * optisch verdeckt.
+         */
+        background: #f1f1f1 !important;
 
-    box-sizing: border-box !important;
+        border-left:
+            1px solid #d5d5d5 !important;
 
-    /*
-     * WICHTIG:
-     * vorher -1, dadurch lag die Ausbuchtung
-     * HINTER Weihnachtsshop.
-     */
-    z-index: 20001 !important;
+        border-right:
+            1px solid #d5d5d5 !important;
 
-    pointer-events: auto !important;
-}
+        box-sizing: border-box !important;
 
+        z-index: 20001 !important;
 
-    /*
-     * Kleine weiße Linie unten entfernen,
-     * damit Tab und grauer Bereich zusammenhängen.
-     */
-   
+        pointer-events: auto !important;
+    }
+
 
     /* =====================================================
        SCHLIESSEN
        ===================================================== */
 
     .preis-lando-hover-close {
+
         position: absolute !important;
 
         top: 10px !important;
@@ -190,6 +223,7 @@ min-width: 100% !important;
         gap: 8px !important;
 
         margin: 0 !important;
+
         padding: 4px 0 !important;
 
         border: 0 !important;
@@ -199,7 +233,9 @@ min-width: 100% !important;
         color: #666 !important;
 
         font-family: inherit !important;
+
         font-size: 13px !important;
+
         line-height: 20px !important;
 
         cursor: pointer !important;
@@ -212,28 +248,38 @@ min-width: 100% !important;
 
 
     .preis-lando-hover-close-x {
+
         font-size: 25px !important;
+
         line-height: 20px !important;
+
         font-weight: 300 !important;
     }
 
 
     /* =====================================================
-       INHALT: 3 SPALTEN
+       INHALT
+       3 SPALTEN
        ===================================================== */
 
     .preis-lando-hover-content {
+
         display: grid !important;
 
         grid-template-columns:
-            repeat(3, minmax(0, 1fr)) !important;
+            repeat(
+                3,
+                minmax(0, 1fr)
+            ) !important;
 
         column-gap: 4px !important;
+
         row-gap: 0 !important;
 
         width: 100% !important;
 
         margin: 0 !important;
+
         padding: 0 !important;
 
         box-sizing: border-box !important;
@@ -245,14 +291,17 @@ min-width: 100% !important;
        ===================================================== */
 
     .preis-lando-hover-item {
+
         display: flex !important;
 
         width: 100% !important;
+
         min-width: 0 !important;
 
         min-height: 50px !important;
 
         margin: 0 !important;
+
         padding: 5px 10px !important;
 
         align-items: center !important;
@@ -260,9 +309,12 @@ min-width: 100% !important;
         background: #fff !important;
 
         border: 0 !important;
-        border-bottom: 1px solid #ddd !important;
+
+        border-bottom:
+            1px solid #ddd !important;
 
         color: #333 !important;
+
         text-decoration: none !important;
 
         box-sizing: border-box !important;
@@ -274,29 +326,37 @@ min-width: 100% !important;
 
 
     .preis-lando-hover-item:hover {
+
         background: #f7f7f7 !important;
 
         color: #333 !important;
+
         text-decoration: none !important;
     }
 
 
     /* =====================================================
-       BILDER
+       KATEGORIEBILDER
        ===================================================== */
 
     .preis-lando-hover-image {
+
         display: block !important;
 
-        flex: 0 0 42px !important;
+        flex:
+            0 0 42px !important;
 
         width: 42px !important;
+
         height: 42px !important;
 
         max-width: 42px !important;
+
         max-height: 42px !important;
 
         margin-right: 10px !important;
+
+        padding: 0 !important;
 
         object-fit: contain !important;
 
@@ -304,29 +364,51 @@ min-width: 100% !important;
     }
 
 
+    /*
+     * Wenn für eine Kategorie kein Bild geliefert wird,
+     * bleibt der Platzhalter transparent.
+     */
+
     .preis-lando-hover-image-empty {
+
+        display: block !important;
+
+        flex:
+            0 0 42px !important;
+
+        width: 42px !important;
+
+        height: 42px !important;
+
+        margin-right: 10px !important;
+
         background: transparent !important;
     }
 
 
     /* =====================================================
-       TEXT
+       KATEGORIETEXT
        ===================================================== */
 
     .preis-lando-hover-text {
+
         display: block !important;
 
-        flex: 1 1 auto !important;
+        flex:
+            1 1 auto !important;
 
         min-width: 0 !important;
 
         font-size: 14px !important;
+
         line-height: 18px !important;
 
         color: #333 !important;
 
         white-space: nowrap !important;
+
         overflow: hidden !important;
+
         text-overflow: ellipsis !important;
     }
 
@@ -336,7 +418,9 @@ min-width: 100% !important;
        ===================================================== */
 
     .preis-lando-hover-loading {
-        grid-column: 1 / -1 !important;
+
+        grid-column:
+            1 / -1 !important;
 
         padding: 20px !important;
 
@@ -346,7 +430,8 @@ min-width: 100% !important;
 
 
 /* =========================================================
-   MOBIL
+   MOBIL / TABLET
+   Mega-Menü deaktivieren
    ========================================================= */
 
 @media (max-width: 1199.98px) {
@@ -356,35 +441,4 @@ min-width: 100% !important;
     }
 }
 
-/* =========================================================
-   AKTIVER HAUPTMENÜPUNKT GRAU
-   + MEGA-MENÜ ETWAS WEITER RUNTER
-   ========================================================= */
-
-@media (min-width: 1200px) {
-
-    .kategorie-11-spalten
-    .preis-lando-hover-parent.is-hover-active
-    > a
-    .nav-item {
-        background: #f1f1f1 !important;
-
-        border-top: 1px solid #d5d5d5 !important;
-        border-left: 1px solid #d5d5d5 !important;
-        border-right: 1px solid #d5d5d5 !important;
-
-        box-sizing: border-box !important;
-    }
-
-    .kategorie-11-spalten
-    .preis-lando-hover-parent.is-hover-active
-    > a
-    .nav-text {
-        background: #f1f1f1 !important;
-    }
-
-    .preis-lando-hover-menu {
-        transform: translateY(8px) !important;
-    }
-}
 </style>

@@ -13,14 +13,36 @@
     const HOVER_OPEN_DELAY = 120;
     const HOVER_CLOSE_DELAY = 350;
 
-    window.PreisLandoHoverVersion = "1.1.3";
+    window.PreisLandoHoverVersion = "1.1.5";
 
     let hoverCloseTimer = null;
     let hoverOpenTimer = null;
     let activeHoverBox = null;
 
+
+    /* =====================================================
+       CACHES
+       ===================================================== */
+
     const childCache = {};
     const childRequests = {};
+
+    /*
+     * Fallback-Bilder aus Kategorie-Seiten.
+     *
+     * Beispiel:
+     *
+     * {
+     *     1872: "https://cdn...jpg",
+     *     1882: "https://cdn...jpg"
+     * }
+     */
+    const categoryImageCache = {};
+
+    /*
+     * Verhindert doppelte parallele Requests.
+     */
+    const categoryImageRequests = {};
 
 
     /* =====================================================
@@ -102,6 +124,10 @@
                 "/" + url;
         }
 
+
+        /*
+         * Sprachpräfix berücksichtigen.
+         */
         if (
             typeof App !== "undefined" &&
             App.urls &&
@@ -129,14 +155,8 @@
 
 
     /* =====================================================
-       KATEGORIEBILDER
+       DIREKTES KATEGORIEBILD
        ===================================================== */
-
-    function getImageSource()
-    {
-        return "image2Path";
-    }
-
 
     function getCategoryImage(category)
     {
@@ -152,11 +172,7 @@
         const details =
             category.details[0];
 
-        const preferredSource =
-            getImageSource();
-
         let imagePath =
-            details[preferredSource] ||
             details.image2Path ||
             details.imagePath ||
             "";
@@ -166,6 +182,10 @@
             return "";
         }
 
+
+        /*
+         * Bereits vollständige URL.
+         */
         if (
             imagePath.indexOf(
                 "https://"
@@ -178,11 +198,13 @@
             return imagePath;
         }
 
+
         imagePath =
             imagePath.replace(
                 /^\/+/,
                 ""
             );
+
 
         if (
             imagePath.indexOf(
@@ -193,8 +215,393 @@
             return "/" + imagePath;
         }
 
+
         return "/documents/" +
             imagePath;
+    }
+
+
+    /* =====================================================
+       ARTIKELBILD AUS KATEGORIE-SEITE HOLEN
+       ===================================================== */
+
+    function normalizeImageUrl(url)
+    {
+        if (!url)
+        {
+            return "";
+        }
+
+        url =
+            String(url)
+                .trim();
+
+
+        if (!url)
+        {
+            return "";
+        }
+
+
+        /*
+         * srcset:
+         *
+         * bild1.jpg 400w, bild2.jpg 800w
+         *
+         * → erstes Bild verwenden
+         */
+        if (url.indexOf(",") !== -1)
+        {
+            url =
+                url
+                    .split(",")[0]
+                    .trim();
+        }
+
+
+        /*
+         * "URL 400w" entfernen.
+         */
+        url =
+            url
+                .split(/\s+/)[0];
+
+
+        if (
+            url.indexOf("//") === 0
+        )
+        {
+            return (
+                window.location.protocol +
+                url
+            );
+        }
+
+
+        try
+        {
+            return new URL(
+                url,
+                window.location.origin
+            ).href;
+        }
+        catch (error)
+        {
+            return url;
+        }
+    }
+
+
+    function getImageUrlFromElement(img)
+    {
+        if (!img)
+        {
+            return "";
+        }
+
+
+        /*
+         * Plenty / Lazy-Loading Varianten.
+         */
+        const candidates =
+        [
+            img.getAttribute(
+                "data-src"
+            ),
+
+            img.getAttribute(
+                "data-original"
+            ),
+
+            img.getAttribute(
+                "data-lazy"
+            ),
+
+            img.getAttribute(
+                "data-lazy-src"
+            ),
+
+            img.getAttribute(
+                "src"
+            ),
+
+            img.getAttribute(
+                "data-srcset"
+            ),
+
+            img.getAttribute(
+                "srcset"
+            )
+        ];
+
+
+        for (
+            const candidate
+            of candidates
+        )
+        {
+            const result =
+                normalizeImageUrl(
+                    candidate
+                );
+
+            if (result)
+            {
+                return result;
+            }
+        }
+
+
+        return "";
+    }
+
+
+    function extractFirstProductImage(html)
+    {
+        if (!html)
+        {
+            return "";
+        }
+
+
+        const parser =
+            new DOMParser();
+
+
+        const doc =
+            parser.parseFromString(
+                html,
+                "text/html"
+            );
+
+
+        /*
+         * 1.
+         * Zuerst nach echten Plenty-Artikelbildern
+         * suchen.
+         *
+         * Die CDN-Artikelbilder enthalten normalerweise:
+         *
+         * /item/images/
+         */
+        const allImages =
+            Array.from(
+                doc.querySelectorAll(
+                    "img"
+                )
+            );
+
+
+        for (const img of allImages)
+        {
+            const url =
+                getImageUrlFromElement(
+                    img
+                );
+
+
+            if (
+                url &&
+                url.indexOf(
+                    "/item/images/"
+                ) !== -1
+            )
+            {
+                return url;
+            }
+        }
+
+
+        /*
+         * 2.
+         * Falls Plenty die Struktur ändert,
+         * gezielt typische Produkt-Klassen prüfen.
+         */
+        const selectors =
+        [
+            ".cmp-product-thumb img",
+            ".product-image img",
+            ".item-image img",
+            ".widget-item-list img",
+            ".product-list img",
+            ".item-list img",
+            "article img"
+        ];
+
+
+        for (
+            const selector
+            of selectors
+        )
+        {
+            const img =
+                doc.querySelector(
+                    selector
+                );
+
+
+            const url =
+                getImageUrlFromElement(
+                    img
+                );
+
+
+            if (url)
+            {
+                return url;
+            }
+        }
+
+
+        return "";
+    }
+
+
+    function loadFallbackCategoryImage(
+        category
+    )
+    {
+        if (
+            !category ||
+            !category.id
+        )
+        {
+            return Promise.resolve(
+                ""
+            );
+        }
+
+
+        const categoryId =
+            category.id;
+
+
+        /*
+         * Bereits im Cache.
+         */
+        if (
+            Object.prototype
+                .hasOwnProperty.call(
+                    categoryImageCache,
+                    categoryId
+                )
+        )
+        {
+            return Promise.resolve(
+                categoryImageCache[
+                    categoryId
+                ]
+            );
+        }
+
+
+        /*
+         * Request läuft bereits.
+         */
+        if (
+            categoryImageRequests[
+                categoryId
+            ]
+        )
+        {
+            return categoryImageRequests[
+                categoryId
+            ];
+        }
+
+
+        const categoryUrl =
+            getCategoryUrl(
+                category
+            );
+
+
+        categoryImageRequests[
+            categoryId
+        ] =
+            fetch(
+                categoryUrl,
+                {
+                    credentials:
+                        "same-origin",
+
+                    headers:
+                    {
+                        "X-Requested-With":
+                            "XMLHttpRequest"
+                    }
+                }
+            )
+                .then(
+                    function (response)
+                    {
+                        if (!response.ok)
+                        {
+                            throw new Error(
+                                "HTTP " +
+                                response.status
+                            );
+                        }
+
+                        return response.text();
+                    }
+                )
+                .then(
+                    function (html)
+                    {
+                        const imageUrl =
+                            extractFirstProductImage(
+                                html
+                            );
+
+
+                        categoryImageCache[
+                            categoryId
+                        ] =
+                            imageUrl || "";
+
+
+                        return categoryImageCache[
+                            categoryId
+                        ];
+                    }
+                )
+                .catch(
+                    function (error)
+                    {
+                        console.warn(
+                            "PreisLando HoverNavigation:",
+                            "Kein Fallback-Bild für Kategorie",
+                            categoryId,
+                            getCategoryName(
+                                category
+                            ),
+                            error
+                        );
+
+
+                        categoryImageCache[
+                            categoryId
+                        ] =
+                            "";
+
+
+                        return "";
+                    }
+                )
+                .finally(
+                    function ()
+                    {
+                        delete categoryImageRequests[
+                            categoryId
+                        ];
+                    }
+                );
+
+
+        return categoryImageRequests[
+            categoryId
+        ];
     }
 
 
@@ -214,8 +621,12 @@
             return widget.__vue__.$store;
         }
 
+
         const elements =
-            widget.querySelectorAll("*");
+            widget.querySelectorAll(
+                "*"
+            );
+
 
         for (const element of elements)
         {
@@ -230,6 +641,7 @@
             }
         }
 
+
         return null;
     }
 
@@ -237,7 +649,10 @@
     function getLoadedMainCategories(widget)
     {
         const store =
-            findNavigationStore(widget);
+            findNavigationStore(
+                widget
+            );
+
 
         if (
             store &&
@@ -248,15 +663,19 @@
             )
         )
         {
-            return store.state.navigation.categoryChildren;
+            return store
+                .state
+                .navigation
+                .categoryChildren;
         }
+
 
         return [];
     }
 
 
     /* =====================================================
-       SICHTBAREN LINK EINER KATEGORIE ZUORDNEN
+       SICHTBAREN LINK KATEGORIE ZUORDNEN
        ===================================================== */
 
     function findCategoryForLink(
@@ -265,18 +684,26 @@
     )
     {
         const categories =
-            getLoadedMainCategories(widget);
+            getLoadedMainCategories(
+                widget
+            );
+
 
         if (!categories.length)
         {
             return null;
         }
 
+
         const visiblePath =
             normalizePath(
                 link.href
             );
 
+
+        /*
+         * 1. Exakter URL-Vergleich.
+         */
         for (const category of categories)
         {
             const categoryPath =
@@ -286,21 +713,28 @@
                     )
                 );
 
+
             if (
                 categoryPath &&
-                categoryPath === visiblePath
+                categoryPath ===
+                    visiblePath
             )
             {
                 return category;
             }
         }
 
+
+        /*
+         * 2. Ohne Sprachpräfix.
+         */
         for (const category of categories)
         {
             const categoryPath =
                 normalizePath(
                     category.url
                 );
+
 
             if (
                 categoryPath &&
@@ -313,6 +747,10 @@
             }
         }
 
+
+        /*
+         * 3. Fallback Kategoriename.
+         */
         const visibleName =
             (
                 link.textContent ||
@@ -320,6 +758,7 @@
             )
                 .trim()
                 .toLowerCase();
+
 
         for (const category of categories)
         {
@@ -330,21 +769,24 @@
                     .trim()
                     .toLowerCase();
 
+
             if (
                 categoryName &&
-                categoryName === visibleName
+                categoryName ===
+                    visibleName
             )
             {
                 return category;
             }
         }
 
+
         return null;
     }
 
 
     /* =====================================================
-       API: DIREKTE UNTERKATEGORIEN LADEN
+       UNTERKATEGORIEN LADEN
        ===================================================== */
 
     function fetchCategoryChildren(
@@ -360,6 +802,7 @@
             "&indexStart=0" +
             "&maxCount=" +
             MAX_CHILDREN;
+
 
         return fetch(
             url,
@@ -401,6 +844,7 @@
                         return response.data;
                     }
 
+
                     if (
                         Array.isArray(
                             response
@@ -409,6 +853,7 @@
                     {
                         return response;
                     }
+
 
                     return [];
                 }
@@ -435,6 +880,7 @@
             );
         }
 
+
         if (
             childRequests[
                 categoryId
@@ -445,6 +891,7 @@
                 categoryId
             ];
         }
+
 
         childRequests[
             categoryId
@@ -464,6 +911,7 @@
                                 ? children
                                 : [];
 
+
                         return childCache[
                             categoryId
                         ];
@@ -478,6 +926,7 @@
                             error
                         );
 
+
                         return [];
                     }
                 )
@@ -489,6 +938,7 @@
                         ];
                     }
                 );
+
 
         return childRequests[
             categoryId
@@ -529,7 +979,7 @@
 
 
     /* =====================================================
-       AKTIVE KATEGORIE MARKIEREN
+       AKTIVE KATEGORIE
        ===================================================== */
 
     function clearActiveCategory()
@@ -567,6 +1017,7 @@
                 }
             );
 
+
         box.classList.add(
             "is-hover-active"
         );
@@ -574,13 +1025,14 @@
 
 
     /* =====================================================
-       ALLE HOVER-MENÜS SCHLIESSEN
+       MENÜS SCHLIESSEN
        ===================================================== */
 
     function closeAllHoverMenus()
     {
         cancelHoverClose();
         cancelHoverOpen();
+
 
         document
             .querySelectorAll(
@@ -599,25 +1051,25 @@
                 }
             );
 
+
         clearActiveCategory();
+
 
         activeHoverBox =
             null;
     }
 
 
-    /* =====================================================
-       AKTIVES HOVER-MENÜ SCHLIESSEN
-       ===================================================== */
-
     function closeActiveHoverMenu()
     {
         cancelHoverClose();
+
 
         if (!activeHoverBox)
         {
             return;
         }
+
 
         const menu =
             activeHoverBox
@@ -625,6 +1077,7 @@
                     ":scope > " +
                     ".preis-lando-hover-menu"
                 );
+
 
         if (menu)
         {
@@ -637,9 +1090,13 @@
             );
         }
 
-        activeHoverBox.classList.remove(
-            "is-hover-active"
-        );
+
+        activeHoverBox
+            .classList
+            .remove(
+                "is-hover-active"
+            );
+
 
         activeHoverBox =
             null;
@@ -647,174 +1104,189 @@
 
 
     /* =====================================================
-       MEGA-MENÜ POSITION BERECHNEN
+       MEGA-MENÜ POSITION / AUSBUCHTUNG
        ===================================================== */
 
-function positionMegaMenu(
-    widget,
-    box,
-    menu
-)
-{
-    const widgetRect =
-        widget.getBoundingClientRect();
-
-    const boxRect =
-        box.getBoundingClientRect();
-
-
-    const boxes =
-        Array.from(
-            widget.querySelectorAll(
-                ".row > div"
-            )
-        )
-        .filter(
-            function (entry)
-            {
-                return !!entry.querySelector(
-                    ":scope > a"
-                );
-            }
-        );
-
-
-    if (!boxes.length)
-    {
-        return;
-    }
-
-
-    /* =====================================================
-       REIHEN ERMITTELN
-       ===================================================== */
-
-    const rowTops = [];
-
-
-    boxes.forEach(
-        function (entry)
-        {
-            const top =
-                Math.round(
-                    entry
-                        .getBoundingClientRect()
-                        .top
-                );
-
-
-            if (!rowTops.includes(top))
-            {
-                rowTops.push(top);
-            }
-        }
-    );
-
-
-    rowTops.sort(
-        function (a, b)
-        {
-            return a - b;
-        }
-    );
-
-
-    const currentTop =
-        Math.round(
-            boxRect.top
-        );
-
-
-    const currentRowIndex =
-        rowTops.indexOf(
-            currentTop
-        );
-
-
-    /* =====================================================
-       OBERE REIHE
-       ===================================================== */
-
-    if (
-        currentRowIndex === 0 &&
-        rowTops.length > 1
+    function positionMegaMenu(
+        widget,
+        box,
+        menu
     )
     {
-        const secondRowTop =
-            rowTops[1];
+        const widgetRect =
+            widget.getBoundingClientRect();
+
+        const boxRect =
+            box.getBoundingClientRect();
 
 
-        /*
-         * WICHTIG:
-         * absolute Position relativ zum Kategorien-Widget.
-         */
-        const menuTop =
-            secondRowTop -
-            widgetRect.top;
+        const boxes =
+            Array.from(
+                widget.querySelectorAll(
+                    ".row > div"
+                )
+            )
+                .filter(
+                    function (entry)
+                    {
+                        return !!entry.querySelector(
+                            ":scope > a"
+                        );
+                    }
+                );
 
 
-        menu.style.setProperty(
-            "--pl-menu-top",
-            menuTop + "px"
+        if (!boxes.length)
+        {
+            return;
+        }
+
+
+        const rowTops =
+            [];
+
+
+        boxes.forEach(
+            function (entry)
+            {
+                const top =
+                    Math.round(
+                        entry
+                            .getBoundingClientRect()
+                            .top
+                    );
+
+
+                if (
+                    !rowTops.includes(
+                        top
+                    )
+                )
+                {
+                    rowTops.push(
+                        top
+                    );
+                }
+            }
         );
 
 
-        menu.classList.add(
-            "has-notch"
+        rowTops.sort(
+            function (a, b)
+            {
+                return a - b;
+            }
         );
+
+
+        const currentTop =
+            Math.round(
+                boxRect.top
+            );
+
+
+        const currentRowIndex =
+            rowTops.indexOf(
+                currentTop
+            );
 
 
         /* =================================================
-           AUSBUCHTUNG
+           OBERE ZEILE
+           → AUSBUCHTUNG
            ================================================= */
 
-        menu.style.setProperty(
-            "--pl-notch-left",
-            (
-                boxRect.left -
-                widgetRect.left
-            ) + "px"
-        );
+        if (
+            currentRowIndex === 0 &&
+            rowTops.length > 1
+        )
+        {
+            const secondRowTop =
+                rowTops[1];
 
 
-        menu.style.setProperty(
-            "--pl-notch-width",
-            boxRect.width + "px"
-        );
+            const secondRowBoxes =
+                boxes.filter(
+                    function (entry)
+                    {
+                        return (
+                            Math.round(
+                                entry
+                                    .getBoundingClientRect()
+                                    .top
+                            )
+                            === secondRowTop
+                        );
+                    }
+                );
 
 
-        menu.style.setProperty(
-            "--pl-notch-height",
-            (
-                secondRowTop -
-                boxRect.top
-            ) + "px"
-        );
+            let secondRowBottom =
+                secondRowTop;
+
+
+            secondRowBoxes.forEach(
+                function (entry)
+                {
+                    const bottom =
+                        entry
+                            .getBoundingClientRect()
+                            .bottom;
+
+
+                    if (
+                        bottom >
+                        secondRowBottom
+                    )
+                    {
+                        secondRowBottom =
+                            bottom;
+                    }
+                }
+            );
+
+
+            menu.classList.add(
+                "has-notch"
+            );
+
+
+            menu.style.setProperty(
+                "--pl-notch-left",
+                (
+                    boxRect.left -
+                    widgetRect.left
+                ) + "px"
+            );
+
+
+            menu.style.setProperty(
+                "--pl-notch-width",
+                boxRect.width + "px"
+            );
+
+
+            menu.style.setProperty(
+                "--pl-notch-height",
+                (
+                    secondRowBottom -
+                    secondRowTop
+                ) + "px"
+            );
+        }
+
+        /* =================================================
+           UNTERE ZEILE
+           ================================================= */
+
+        else
+        {
+            menu.classList.remove(
+                "has-notch"
+            );
+        }
     }
 
-
-    /* =====================================================
-       UNTERE REIHE
-       ===================================================== */
-
-    else
-    {
-        menu.classList.remove(
-            "has-notch"
-        );
-
-
-        const menuTop =
-            boxRect.bottom -
-            widgetRect.top;
-
-
-        menu.style.setProperty(
-            "--pl-menu-top",
-            menuTop + "px"
-        );
-    }
-}
 
     /* =====================================================
        MEGA-MENÜ ERZEUGEN
@@ -828,22 +1300,25 @@ function positionMegaMenu(
                 ".preis-lando-hover-menu"
             );
 
+
         if (menu)
         {
             return menu;
         }
+
 
         menu =
             document.createElement(
                 "div"
             );
 
+
         menu.className =
             "preis-lando-hover-menu";
 
 
         /* -------------------------------------------------
-           SCHLIESSEN-BUTTON
+           SCHLIESSEN
            ------------------------------------------------- */
 
         const closeButton =
@@ -851,8 +1326,10 @@ function positionMegaMenu(
                 "button"
             );
 
+
         closeButton.type =
             "button";
+
 
         closeButton.className =
             "preis-lando-hover-close";
@@ -863,6 +1340,7 @@ function positionMegaMenu(
                 "span"
             );
 
+
         closeText.textContent =
             "Schließen";
 
@@ -872,8 +1350,10 @@ function positionMegaMenu(
                 "span"
             );
 
+
         closeX.className =
             "preis-lando-hover-close-x";
+
 
         closeX.textContent =
             "×";
@@ -882,6 +1362,7 @@ function positionMegaMenu(
         closeButton.appendChild(
             closeText
         );
+
 
         closeButton.appendChild(
             closeX
@@ -906,7 +1387,7 @@ function positionMegaMenu(
 
 
         /* -------------------------------------------------
-           INHALTS-CONTAINER
+           INHALT
            ------------------------------------------------- */
 
         const content =
@@ -914,8 +1395,10 @@ function positionMegaMenu(
                 "div"
             );
 
+
         content.className =
             "preis-lando-hover-content";
+
 
         menu.appendChild(
             content
@@ -923,7 +1406,7 @@ function positionMegaMenu(
 
 
         /* -------------------------------------------------
-           MENÜ BETRETEN
+           MENÜ HOVER
            ------------------------------------------------- */
 
         menu.addEventListener(
@@ -938,15 +1421,12 @@ function positionMegaMenu(
         );
 
 
-        /* -------------------------------------------------
-           MENÜ VERLASSEN
-           ------------------------------------------------- */
-
         menu.addEventListener(
             "mouseleave",
             function ()
             {
                 cancelHoverClose();
+
 
                 hoverCloseTimer =
                     setTimeout(
@@ -970,6 +1450,7 @@ function positionMegaMenu(
             menu
         );
 
+
         return menu;
     }
 
@@ -985,40 +1466,164 @@ function positionMegaMenu(
                 ".preis-lando-hover-content"
             );
 
+
         if (!content)
         {
             return;
         }
 
+
         content.innerHTML =
             "";
+
 
         menu.classList.remove(
             "is-empty"
         );
 
+
         menu.classList.add(
             "is-loading"
         );
 
+
         menu.classList.add(
             "is-visible"
         );
+
 
         const loading =
             document.createElement(
                 "div"
             );
 
+
         loading.className =
             "preis-lando-hover-loading";
+
 
         loading.textContent =
             "Kategorien werden geladen …";
 
+
         content.appendChild(
             loading
         );
+    }
+
+
+    /* =====================================================
+       EIN KATEGORIEBILD ERZEUGEN
+       ===================================================== */
+
+    function createCategoryImageElement(
+        category
+    )
+    {
+        const directImage =
+            getCategoryImage(
+                category
+            );
+
+
+        /*
+         * Direktes Kategorie-Bild vorhanden.
+         */
+        if (directImage)
+        {
+            const image =
+                document.createElement(
+                    "img"
+                );
+
+
+            image.className =
+                "preis-lando-hover-image";
+
+
+            image.src =
+                directImage;
+
+
+            image.alt =
+                getCategoryName(
+                    category
+                );
+
+
+            image.loading =
+                "lazy";
+
+
+            return image;
+        }
+
+
+        /*
+         * Kein Kategorie-Bild:
+         * zunächst Platzhalter erzeugen.
+         *
+         * Dieser wird anschließend asynchron
+         * durch das erste Artikelbild ersetzt.
+         */
+        const image =
+            document.createElement(
+                "img"
+            );
+
+
+        image.className =
+            "preis-lando-hover-image " +
+            "preis-lando-hover-image-empty";
+
+
+        image.alt =
+            getCategoryName(
+                category
+            );
+
+
+        /*
+         * Verhindert kaputtes Bild-Symbol,
+         * solange src noch fehlt.
+         */
+        image.style.visibility =
+            "hidden";
+
+
+        loadFallbackCategoryImage(
+            category
+        )
+            .then(
+                function (fallbackImage)
+                {
+                    if (!fallbackImage)
+                    {
+                        return;
+                    }
+
+
+                    /*
+                     * Element könnte inzwischen
+                     * aus dem DOM entfernt worden sein.
+                     * Das ist aber unkritisch.
+                     */
+                    image.src =
+                        fallbackImage;
+
+
+                    image.classList.remove(
+                        "preis-lando-hover-image-empty"
+                    );
+
+
+                    image.style.visibility =
+                        "visible";
+                }
+            );
+
+
+        return image;
     }
 
 
@@ -1036,17 +1641,21 @@ function positionMegaMenu(
                 ".preis-lando-hover-content"
             );
 
+
         if (!content)
         {
             return;
         }
 
+
         content.innerHTML =
             "";
+
 
         menu.classList.remove(
             "is-loading"
         );
+
 
         if (
             !children ||
@@ -1057,16 +1666,20 @@ function positionMegaMenu(
                 "is-empty"
             );
 
+
             menu.classList.remove(
                 "is-visible"
             );
 
+
             return;
         }
+
 
         menu.classList.remove(
             "is-empty"
         );
+
 
         for (
             const category
@@ -1078,8 +1691,10 @@ function positionMegaMenu(
                     "a"
                 );
 
+
             item.className =
                 "preis-lando-hover-item";
+
 
             item.href =
                 getCategoryUrl(
@@ -1091,51 +1706,15 @@ function positionMegaMenu(
                BILD
                --------------------------------------------- */
 
-            const imageUrl =
-                getCategoryImage(
+            const image =
+                createCategoryImageElement(
                     category
                 );
 
-            if (imageUrl)
-            {
-                const image =
-                    document.createElement(
-                        "img"
-                    );
 
-                image.className =
-                    "preis-lando-hover-image";
-
-                image.src =
-                    imageUrl;
-
-                image.alt =
-                    getCategoryName(
-                        category
-                    );
-
-                image.loading =
-                    "lazy";
-
-                item.appendChild(
-                    image
-                );
-            }
-            else
-            {
-                const placeholder =
-                    document.createElement(
-                        "span"
-                    );
-
-                placeholder.className =
-                    "preis-lando-hover-image " +
-                    "preis-lando-hover-image-empty";
-
-                item.appendChild(
-                    placeholder
-                );
-            }
+            item.appendChild(
+                image
+            );
 
 
             /* ---------------------------------------------
@@ -1147,22 +1726,27 @@ function positionMegaMenu(
                     "span"
                 );
 
+
             text.className =
                 "preis-lando-hover-text";
+
 
             text.textContent =
                 getCategoryName(
                     category
                 );
 
+
             item.appendChild(
                 text
             );
+
 
             content.appendChild(
                 item
             );
         }
+
 
         menu.classList.add(
             "is-visible"
@@ -1171,7 +1755,7 @@ function positionMegaMenu(
 
 
     /* =====================================================
-       EINZELNE HAUPTKATEGORIE VORBEREITEN
+       HAUPTKATEGORIE VORBEREITEN
        ===================================================== */
 
     function prepareCategoryBox(
@@ -1188,28 +1772,28 @@ function positionMegaMenu(
             return;
         }
 
+
         const link =
             box.querySelector(
                 ":scope > a"
             );
+
 
         if (!link)
         {
             return;
         }
 
+
         box.dataset
             .preisLandoHoverReady =
             "1";
+
 
         box.classList.add(
             "preis-lando-hover-parent"
         );
 
-
-        /* =================================================
-           MENÜ ÖFFNEN
-           ================================================= */
 
         function openMenu()
         {
@@ -1218,13 +1802,16 @@ function positionMegaMenu(
                 return;
             }
 
+
             cancelHoverClose();
+
 
             const category =
                 findCategoryForLink(
                     widget,
                     link
                 );
+
 
             if (
                 !category ||
@@ -1237,9 +1824,14 @@ function positionMegaMenu(
                     link.href
                 );
 
+
                 return;
             }
 
+
+            /*
+             * Vorheriges Menü schließen.
+             */
             if (
                 activeHoverBox &&
                 activeHoverBox !== box
@@ -1252,16 +1844,19 @@ function positionMegaMenu(
                             ".preis-lando-hover-menu"
                         );
 
+
                 if (oldMenu)
                 {
                     oldMenu.classList.remove(
                         "is-visible"
                     );
 
+
                     oldMenu.classList.remove(
                         "has-notch"
                     );
                 }
+
 
                 activeHoverBox
                     .classList
@@ -1270,18 +1865,22 @@ function positionMegaMenu(
                     );
             }
 
+
             activeHoverBox =
                 box;
+
 
             setActiveCategory(
                 widget,
                 box
             );
 
+
             const menu =
                 getOrCreateMenu(
                     box
                 );
+
 
             positionMegaMenu(
                 widget,
@@ -1290,10 +1889,9 @@ function positionMegaMenu(
             );
 
 
-            /* ---------------------------------------------
-               BEREITS GELADEN
-               --------------------------------------------- */
-
+            /*
+             * Bereits geladen.
+             */
             if (
                 menu.dataset.loaded
                 === "1"
@@ -1311,13 +1909,10 @@ function positionMegaMenu(
                     );
                 }
 
+
                 return;
             }
 
-
-            /* ---------------------------------------------
-               LADEN
-               --------------------------------------------- */
 
             showLoading(
                 menu
@@ -1333,10 +1928,12 @@ function positionMegaMenu(
                         menu.dataset.loaded =
                             "1";
 
+
                         renderChildren(
                             menu,
                             children
                         );
+
 
                         if (
                             activeHoverBox
@@ -1353,7 +1950,7 @@ function positionMegaMenu(
 
 
         /* =================================================
-           HAUPTKATEGORIE BETRETEN
+           ENTER
            ================================================= */
 
         box.addEventListener(
@@ -1365,8 +1962,10 @@ function positionMegaMenu(
                     return;
                 }
 
+
                 cancelHoverClose();
                 cancelHoverOpen();
+
 
                 hoverOpenTimer =
                     setTimeout(
@@ -1374,6 +1973,7 @@ function positionMegaMenu(
                         {
                             hoverOpenTimer =
                                 null;
+
 
                             openMenu();
                         },
@@ -1384,7 +1984,7 @@ function positionMegaMenu(
 
 
         /* =================================================
-           HAUPTKATEGORIE VERLASSEN
+           LEAVE
            ================================================= */
 
         box.addEventListener(
@@ -1393,6 +1993,7 @@ function positionMegaMenu(
             {
                 cancelHoverOpen();
                 cancelHoverClose();
+
 
                 hoverCloseTimer =
                     setTimeout(
@@ -1424,20 +2025,24 @@ function positionMegaMenu(
             return;
         }
 
+
         const widget =
             document.querySelector(
                 ".kategorie-11-spalten"
             );
+
 
         if (!widget)
         {
             return;
         }
 
+
         const boxes =
             widget.querySelectorAll(
                 ".row > div"
             );
+
 
         boxes.forEach(
             function (box)
@@ -1466,6 +2071,7 @@ function positionMegaMenu(
     {
         initializeHoverNavigation();
 
+
         const observer =
             new MutationObserver(
                 function ()
@@ -1477,6 +2083,7 @@ function positionMegaMenu(
                 }
             );
 
+
         observer.observe(
             document.body,
             {
@@ -1485,8 +2092,10 @@ function positionMegaMenu(
             }
         );
 
+
         let resizeTimer =
             null;
+
 
         window.addEventListener(
             "resize",
@@ -1495,6 +2104,7 @@ function positionMegaMenu(
                 clearTimeout(
                     resizeTimer
                 );
+
 
                 resizeTimer =
                     setTimeout(
@@ -1543,9 +2153,14 @@ function positionMegaMenu(
         const priceCache =
             {};
 
+
         const pendingPrices =
             {};
 
+
+        /* -------------------------------------------------
+           IDS AUS URL
+           ------------------------------------------------- */
 
         function getIdsFromAutocompleteUrl(
             url
@@ -1556,6 +2171,7 @@ function positionMegaMenu(
                 return null;
             }
 
+
             const cleanUrl =
                 String(url)
                     .split("?")[0]
@@ -1564,15 +2180,18 @@ function positionMegaMenu(
                         ""
                     );
 
+
             const match =
                 cleanUrl.match(
                     /_(\d+)_(\d+)$/
                 );
 
+
             if (!match)
             {
                 return null;
             }
+
 
             return {
                 itemId:
@@ -1590,6 +2209,10 @@ function positionMegaMenu(
         }
 
 
+        /* -------------------------------------------------
+           PREIS LADEN
+           ------------------------------------------------- */
+
         function loadVariationPrice(
             itemId,
             variationId
@@ -1599,6 +2222,7 @@ function positionMegaMenu(
                 itemId +
                 "_" +
                 variationId;
+
 
             if (
                 Object.prototype
@@ -1615,6 +2239,7 @@ function positionMegaMenu(
                 );
             }
 
+
             if (
                 pendingPrices[
                     cacheKey
@@ -1626,11 +2251,13 @@ function positionMegaMenu(
                 ];
             }
 
+
             const url =
                 "/rest/preislando/search-price/" +
                 encodeURIComponent(
                     variationId
                 );
+
 
             pendingPrices[
                 cacheKey
@@ -1659,6 +2286,7 @@ function positionMegaMenu(
                                 );
                             }
 
+
                             return response.json();
                         }
                     )
@@ -1672,10 +2300,12 @@ function positionMegaMenu(
                                     ? data.price
                                     : "";
 
+
                             priceCache[
                                 cacheKey
                             ] =
                                 price;
+
 
                             return price;
                         }
@@ -1691,10 +2321,12 @@ function positionMegaMenu(
                                 error
                             );
 
+
                             priceCache[
                                 cacheKey
                             ] =
                                 "";
+
 
                             return "";
                         }
@@ -1708,11 +2340,16 @@ function positionMegaMenu(
                         }
                     );
 
+
             return pendingPrices[
                 cacheKey
             ];
         }
 
+
+        /* -------------------------------------------------
+           PREISELEMENT
+           ------------------------------------------------- */
 
         function getOrCreatePriceElement(
             link
@@ -1724,26 +2361,35 @@ function positionMegaMenu(
                     ".preis-lando-search-price"
                 );
 
+
             if (price)
             {
                 return price;
             }
+
 
             price =
                 document.createElement(
                     "span"
                 );
 
+
             price.className =
                 "preis-lando-search-price";
+
 
             link.appendChild(
                 price
             );
 
+
             return price;
         }
 
+
+        /* -------------------------------------------------
+           SUCHTREFFER
+           ------------------------------------------------- */
 
         function prepareAutocompleteItem(
             link
@@ -1758,6 +2404,7 @@ function positionMegaMenu(
                 return;
             }
 
+
             const ids =
                 getIdsFromAutocompleteUrl(
                     link.getAttribute(
@@ -1765,22 +2412,27 @@ function positionMegaMenu(
                     )
                 );
 
+
             if (!ids)
             {
                 return;
             }
 
+
             link.dataset
                 .preisLandoPriceReady =
                 "1";
+
 
             const priceElement =
                 getOrCreatePriceElement(
                     link
                 );
 
+
             priceElement.textContent =
                 "";
+
 
             loadVariationPrice(
                 ids.itemId,
@@ -1807,6 +2459,7 @@ function positionMegaMenu(
                     "a.autocomplete-suggestion"
                 );
 
+
             links.forEach(
                 prepareAutocompleteItem
             );
@@ -1821,6 +2474,7 @@ function positionMegaMenu(
                 }
             );
 
+
         autocompleteObserver.observe(
             document.body,
             {
@@ -1828,6 +2482,7 @@ function positionMegaMenu(
                 subtree: true
             }
         );
+
 
         initializeAutocompletePrices();
 

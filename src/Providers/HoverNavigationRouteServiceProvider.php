@@ -17,9 +17,20 @@ class HoverNavigationRouteServiceProvider extends RouteServiceProvider
             ],
             function (ApiRouter $api)
             {
+                /*
+                 * Preis für Schnellsuche
+                 */
                 $api->get(
                     'preislando/search-price/{variationId}',
                     'SearchPriceResource@show'
+                );
+
+                /*
+                 * Fallback-Bild für Unterkategorie
+                 */
+                $api->get(
+                    'preislando/category-image/{categoryId}',
+                    'CategoryImageResource@show'
                 );
             }
         );

@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.4";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.4");
-    console.info("[PreisLandoHoverNavigation] v1.4.4 geladen");
+    window.PreisLandoHoverVersion = "1.4.5";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.5");
+    console.info("[PreisLandoHoverNavigation] v1.4.5 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -641,7 +641,7 @@
        ===================================================== */
 
     function getMobileDialog() {
-        return document.querySelector("dialog.preis-lando-mobile-drawer");
+        return document.querySelector(".preis-lando-mobile-drawer");
     }
 
     function setMobileButtonState(open) {
@@ -656,11 +656,9 @@
         document.body.classList.remove("preis-lando-mobile-menu-open");
 
         const dialog = getMobileDialog();
-        if (dialog && dialog.open) {
+        if (dialog) {
             dialog.classList.remove("is-open");
-            window.setTimeout(function () {
-                if (dialog.open) dialog.close();
-            }, 160);
+            dialog.setAttribute("aria-hidden", "true");
         }
 
         setMobileButtonState(false);
@@ -672,14 +670,7 @@
         const dialog = getMobileDialog();
         if (!dialog) return;
 
-        if (!dialog.open) {
-            try {
-                dialog.showModal();
-            } catch (error) {
-                dialog.setAttribute("open", "");
-            }
-        }
-
+        dialog.setAttribute("aria-hidden", "false");
         requestAnimationFrame(function () {
             dialog.classList.add("is-open");
         });
@@ -692,7 +683,7 @@
     function toggleMobileDrawer() {
         const dialog = getMobileDialog();
         if (!dialog) return;
-        if (dialog.open && dialog.classList.contains("is-open")) closeMobileDrawer();
+        if (dialog.classList.contains("is-open")) closeMobileDrawer();
         else openMobileDrawer();
     }
 
@@ -702,8 +693,11 @@
         let dialog = getMobileDialog();
 
         if (!dialog) {
-            dialog = document.createElement("dialog");
+            dialog = document.createElement("div");
             dialog.className = "preis-lando-mobile-drawer";
+            dialog.setAttribute("role", "dialog");
+            dialog.setAttribute("aria-modal", "true");
+            dialog.setAttribute("aria-hidden", "true");
             dialog.setAttribute("aria-label", "Kategorien");
 
             const panel = document.createElement("div");
@@ -733,20 +727,8 @@
             dialog.appendChild(panel);
             document.body.appendChild(dialog);
 
-            dialog.addEventListener("cancel", function (event) {
-                event.preventDefault();
-                closeMobileDrawer();
-            });
-
             dialog.addEventListener("click", function (event) {
                 if (event.target === dialog) closeMobileDrawer();
-            });
-
-            dialog.addEventListener("close", function () {
-                dialog.classList.remove("is-open");
-                document.documentElement.classList.remove("preis-lando-mobile-menu-open");
-                document.body.classList.remove("preis-lando-mobile-menu-open");
-                setMobileButtonState(false);
             });
         }
 

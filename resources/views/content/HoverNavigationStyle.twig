@@ -1,7 +1,7 @@
 <style>
 /* =========================================================
    PREISLANDO GRID-NAVIGATION + GEMEINSAMES HOVER-FELD
-   Version 1.4.0
+   Version 1.4.1
 
    Prinzip:
    - Hauptkategorien und Hover-Unterkategorien liegen im selben Grid.
@@ -282,31 +282,50 @@
 }
 
 /* =========================================================
-   MOBIL: 2 Spalten, über vorhandenen Kategorien-Button geöffnet.
-   Kein Hover auf Touch; Tippen öffnet direkt die Hauptkategorie.
-   Die alte Plenty-Root-Ansicht kommt nicht mehr zurück.
+   MOBIL: altes Mini-Menü wie vorher
+   - Kategorienbutton öffnet/schließt die Standardnavigation.
+   - Die 10 hochgezogenen Raster-Kategorien sind mobil unsichtbar.
+   - Die originale Root-Kategorie "Neuetischkultur SW5" bleibt mobil
+     erhalten, damit Plenty seine normale Touch-/Untermenülogik nutzt.
+   - Kein Hover-Menü auf Touch.
    ========================================================= */
 @media (max-width: 767.98px) {
     .preis-lando-navigation-root {
         display: none !important;
-        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        list-style: none !important;
+        background: #fff !important;
+    }
+
+    .preis-lando-navigation.mobile-menu-offen .preis-lando-navigation-root {
+        display: block !important;
+    }
+
+    /* Das neue 1-10 Raster gibt es mobil nicht. */
+    .preis-lando-navigation-root > .preis-lando-nav-category {
+        display: none !important;
+    }
+
+    /* Stattdessen wieder Plenty-Mini-Menü / originale Root-Kategorie. */
+    .preis-lando-navigation-root > .preis-lando-original-root {
+        display: list-item !important;
+        position: relative !important;
         width: 100% !important;
         max-width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
     }
 
-    .preis-lando-navigation.mobile-menu-offen .preis-lando-navigation-root {
-        display: grid !important;
-    }
-
-    .preis-lando-navigation-root .preis-lando-nav-link {
+    .preis-lando-navigation-root > .preis-lando-original-root > a {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
         min-height: 40px !important;
-        height: auto !important;
-        padding: 8px 5px !important;
-        font-size: 12px !important;
-        line-height: 16px !important;
-        white-space: normal !important;
+        padding: 8px 10px !important;
+        box-sizing: border-box !important;
     }
 
     .preis-lando-hover-menu {

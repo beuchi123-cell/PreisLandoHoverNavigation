@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.1";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.1");
-    console.info("[PreisLandoHoverNavigation] v1.4.1 geladen");
+    window.PreisLandoHoverVersion = "1.4.2";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.2");
+    console.info("[PreisLandoHoverNavigation] v1.4.2 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -392,6 +392,22 @@
         });
     }
 
+    function updateSharedMenuPointer(topList, box, menu) {
+        if (!topList || !box || !menu) return;
+
+        const rootRect = topList.getBoundingClientRect();
+        const boxRect = box.getBoundingClientRect();
+
+        menu.style.setProperty(
+            "--pl-active-left",
+            Math.max(0, boxRect.left - rootRect.left) + "px"
+        );
+        menu.style.setProperty(
+            "--pl-active-width",
+            boxRect.width + "px"
+        );
+    }
+
     function getOrCreateSharedMenu(topList) {
         let menu = getSharedMenu(topList);
         if (menu) return menu;
@@ -525,6 +541,7 @@
             setActiveCategory(topList, box);
 
             const menu = getOrCreateSharedMenu(topList);
+            updateSharedMenuPointer(topList, box, menu);
             const categoryId = String(category.id);
 
             if (menu.dataset.categoryId === categoryId && menu.dataset.loaded === "1") {
@@ -594,6 +611,172 @@
     }
 
     /* =====================================================
+       MOBILE DRAWER – OTTO-ARTIGES MINI-MENÜ
+       ===================================================== */
+
+    function closeMobileDrawer() {
+        document.documentElement.classList.remove("preis-lando-mobile-menu-open");
+        document.body.classList.remove("preis-lando-mobile-menu-open");
+
+        const drawer = document.querySelector(".preis-lando-mobile-drawer");
+        const backdrop = document.querySelector(".preis-lando-mobile-backdrop");
+        if (drawer) drawer.classList.remove("is-open");
+        if (backdrop) backdrop.classList.remove("is-open");
+
+        document.querySelectorAll(".kategorie-mobile-button").forEach(function (button) {
+            button.classList.remove("is-open");
+            button.setAttribute("aria-expanded", "false");
+        });
+    }
+
+    function openMobileDrawer() {
+        if (isHoverMode()) return;
+
+        const drawer = document.querySelector(".preis-lando-mobile-drawer");
+        const backdrop = document.querySelector(".preis-lando-mobile-backdrop");
+        if (!drawer || !backdrop) return;
+
+        drawer.classList.add("is-open");
+        backdrop.classList.add("is-open");
+        document.documentElement.classList.add("preis-lando-mobile-menu-open");
+        document.body.classList.add("preis-lando-mobile-menu-open");
+
+        document.querySelectorAll(".kategorie-mobile-button").forEach(function (button) {
+            button.classList.add("is-open");
+            button.setAttribute("aria-expanded", "true");
+        });
+    }
+
+    function toggleMobileDrawer() {
+        const drawer = document.querySelector(".preis-lando-mobile-drawer");
+        if (!drawer) return;
+        if (drawer.classList.contains("is-open")) closeMobileDrawer();
+        else openMobileDrawer();
+    }
+
+    function buildMobileDrawer(categories) {
+        if (!Array.isArray(categories) || !categories.length) return;
+
+        let backdrop = document.querySelector(".preis-lando-mobile-backdrop");
+        let drawer = document.querySelector(".preis-lando-mobile-drawer");
+
+        if (!backdrop) {
+            backdrop = document.createElement("div");
+            backdrop.className = "preis-lando-mobile-backdrop";
+            backdrop.addEventListener("click", closeMobileDrawer);
+            document.body.appendChild(backdrop);
+        }
+
+        if (!drawer) {
+            drawer = document.createElement("aside");
+            drawer.className = "preis-lando-mobile-drawer";
+            drawer.setAttribute("aria-label", "Kategorien");
+
+            const head = document.createElement("div");
+            head.className = "preis-lando-mobile-drawer-head";
+
+            const title = document.createElement("strong");
+            title.textContent = "Kategorien";
+
+            const close = document.createElement("button");
+            close.type = "button";
+            close.className = "preis-lando-mobile-drawer-close";
+            close.setAttribute("aria-label", "Menü schließen");
+            close.textContent = "×";
+            close.addEventListener("click", closeMobileDrawer);
+
+            head.appendChild(title);
+            head.appendChild(close);
+
+            const list = document.createElement("div");
+            list.className = "preis-lando-mobile-drawer-list";
+
+            drawer.appendChild(head);
+            drawer.appendChild(list);
+            document.body.appendChild(drawer);
+        }
+
+        const list = drawer.querySelector(".preis-lando-mobile-drawer-list");
+        if (!list || list.dataset.ready === "1") return;
+
+        categories.forEach(function (category) {
+            if (!category || !category.id) return;
+
+            const row = document.createElement("div");
+            row.className = "preis-lando-mobile-row";
+
+            const main = document.createElement("div");
+            main.className = "preis-lando-mobile-main";
+
+            const link = document.createElement("a");
+            link.className = "preis-lando-mobile-main-link";
+            link.href = getCategoryUrl(category);
+            link.textContent = getCategoryName(category);
+
+            const toggle = document.createElement("button");
+            toggle.type = "button";
+            toggle.className = "preis-lando-mobile-sub-toggle";
+            toggle.setAttribute("aria-label", "Unterkategorien anzeigen");
+            toggle.setAttribute("aria-expanded", "false");
+            toggle.textContent = "›";
+
+            const sub = document.createElement("div");
+            sub.className = "preis-lando-mobile-sub";
+
+            main.appendChild(link);
+            main.appendChild(toggle);
+            row.appendChild(main);
+            row.appendChild(sub);
+            list.appendChild(row);
+
+            let loaded = false;
+            toggle.addEventListener("click", function () {
+                const open = !row.classList.contains("is-open");
+
+                list.querySelectorAll(".preis-lando-mobile-row.is-open").forEach(function (other) {
+                    if (other === row) return;
+                    other.classList.remove("is-open");
+                    const otherToggle = other.querySelector(".preis-lando-mobile-sub-toggle");
+                    if (otherToggle) otherToggle.setAttribute("aria-expanded", "false");
+                });
+
+                row.classList.toggle("is-open", open);
+                toggle.setAttribute("aria-expanded", open ? "true" : "false");
+
+                if (!open || loaded) return;
+
+                sub.innerHTML = '<div class="preis-lando-mobile-sub-loading">wird geladen …</div>';
+                loadCategoryChildren(category.id).then(function (children) {
+                    sub.innerHTML = "";
+                    loaded = true;
+
+                    if (!children || !children.length) {
+                        const direct = document.createElement("a");
+                        direct.className = "preis-lando-mobile-sub-link";
+                        direct.href = getCategoryUrl(category);
+                        direct.textContent = "Alle anzeigen";
+                        sub.appendChild(direct);
+                        return;
+                    }
+
+                    children.forEach(function (child) {
+                        const childLink = document.createElement("a");
+                        childLink.className = "preis-lando-mobile-sub-link";
+                        childLink.href = getCategoryUrl(child);
+                        childLink.textContent = getCategoryName(child);
+                        sub.appendChild(childLink);
+                    });
+                });
+            });
+        });
+
+        list.dataset.ready = "1";
+    }
+
+    window.addEventListener("preislando:mobile-menu-toggle", toggleMobileDrawer);
+    window.addEventListener("preislando:mobile-menu-close", closeMobileDrawer);
+
+    /* =====================================================
        INITIALISIERUNG
        ===================================================== */
 
@@ -604,6 +787,8 @@
         loadRootCategories().then(function (categories) {
             const topList = buildPromotedNavigation(rootLink, categories);
             if (!topList) return;
+
+            buildMobileDrawer(categories);
 
             if (!isHoverMode()) {
                 closeAllHoverMenus();
@@ -641,7 +826,11 @@
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function () {
                 initializeHoverNavigation();
-                if (!isHoverMode()) closeAllHoverMenus();
+                if (!isHoverMode()) {
+                    closeAllHoverMenus();
+                } else {
+                    closeMobileDrawer();
+                }
             }, 100);
         });
     }

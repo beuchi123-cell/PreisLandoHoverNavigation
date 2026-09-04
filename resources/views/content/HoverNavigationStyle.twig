@@ -1,7 +1,7 @@
 <style>
 /* =========================================================
    PREISLANDO GRID-NAVIGATION + GEMEINSAMES HOVER-FELD
-   Version 1.4.3
+   Version 1.4.4
 
    Prinzip:
    - Hauptkategorien und Hover-Unterkategorien liegen im selben Grid.
@@ -39,8 +39,26 @@
     display: none !important;
 }
 
+/* Im Hoverzustand NICHT mehr die ganze zweite Zeile grau färben. */
 .preis-lando-navigation-root.preis-lando-hover-open {
+    background: #fff !important;
+}
+
+/* Nur die Rasterzelle direkt unter der aktiven Hauptkategorie wird grau.
+   Dieses Pseudo-Element ist vor allem für die leeren Randspalten 1 und 6. */
+.preis-lando-navigation-root.preis-lando-hover-open::before {
+    content: "" !important;
+    position: absolute !important;
+    top: 32px !important;
+    left: var(--pl-active-left, 0px) !important;
+    width: var(--pl-active-width, 0px) !important;
+    height: 32px !important;
     background: #f1f1f1 !important;
+    border-left: 1px solid #d5d5d5 !important;
+    border-right: 1px solid #d5d5d5 !important;
+    box-sizing: border-box !important;
+    pointer-events: none !important;
+    z-index: 0 !important;
 }
 
 
@@ -93,6 +111,17 @@
 
 .preis-lando-navigation-root
 .preis-lando-hover-parent.is-hover-active
+> .preis-lando-nav-link {
+    position: relative !important;
+    z-index: 2 !important;
+    background: #f1f1f1 !important;
+    border-color: #d5d5d5 !important;
+}
+
+/* Wenn unter einer Kategorie noch eine zweite Menüzeile liegt, wird genau
+   deren Zelle als grauer Anschluss verwendet (z.B. Gedeckter Tisch -> Sale). */
+.preis-lando-navigation-root
+.preis-lando-nav-category.preis-lando-hover-under-active
 > .preis-lando-nav-link {
     position: relative !important;
     z-index: 2 !important;
@@ -325,6 +354,12 @@
     background: transparent !important;
     overflow: hidden !important;
     z-index: 2147483647 !important;
+}
+
+.preis-lando-mobile-drawer[open] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 .preis-lando-mobile-drawer::backdrop {

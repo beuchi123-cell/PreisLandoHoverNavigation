@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.3";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.3");
-    console.info("[PreisLandoHoverNavigation] v1.4.3 geladen");
+    window.PreisLandoHoverVersion = "1.4.4";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.4");
+    console.info("[PreisLandoHoverNavigation] v1.4.4 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -392,8 +392,26 @@
     }
 
     function setActiveCategory(topList, box) {
-        getGeneratedBoxes(topList).forEach(function (entry) {
+        const boxes = getGeneratedBoxes(topList);
+        const activeRect = box ? box.getBoundingClientRect() : null;
+        const activeCenter = activeRect ? activeRect.left + activeRect.width / 2 : null;
+
+        boxes.forEach(function (entry) {
             entry.classList.toggle("is-hover-active", entry === box);
+            entry.classList.remove("preis-lando-hover-under-active");
+
+            if (!box || entry === box || !activeRect) return;
+
+            const entryRect = entry.getBoundingClientRect();
+            const entryCenter = entryRect.left + entryRect.width / 2;
+
+            /* Liegt in einer tieferen Menüzeile exakt unter der aktiven Spalte? */
+            if (
+                entryRect.top > activeRect.top + 2 &&
+                Math.abs(entryCenter - activeCenter) < Math.max(3, activeRect.width * 0.15)
+            ) {
+                entry.classList.add("preis-lando-hover-under-active");
+            }
         });
     }
 
@@ -402,15 +420,16 @@
 
         const rootRect = topList.getBoundingClientRect();
         const boxRect = box.getBoundingClientRect();
+        const left = Math.max(0, boxRect.left - rootRect.left) + "px";
+        const width = boxRect.width + "px";
 
-        menu.style.setProperty(
-            "--pl-active-left",
-            Math.max(0, boxRect.left - rootRect.left) + "px"
-        );
-        menu.style.setProperty(
-            "--pl-active-width",
-            boxRect.width + "px"
-        );
+        menu.style.setProperty("--pl-active-left", left);
+        menu.style.setProperty("--pl-active-width", width);
+
+        /* Auch am Root setzen: damit die freie Zelle unter Spalte 1/6
+           nur bei Bedarf grau dargestellt wird. */
+        topList.style.setProperty("--pl-active-left", left);
+        topList.style.setProperty("--pl-active-width", width);
     }
 
     function getOrCreateSharedMenu(topList) {
@@ -805,6 +824,48 @@
         list.dataset.ready = "1";
     }
 
+    function ensureMobileMenuButton() {
+        let button = document.querySelector(".kategorie-mobile-button");
+        const topBar = document.querySelector(".preis-lando-topbar");
+        const host = topBar && (
+            topBar.querySelector(".top-bar-items") ||
+            topBar.querySelector(":scope > .widget-inner") ||
+            topBar
+        );
+
+        if (!button && host) {
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = "kategorie-mobile-button";
+            button.setAttribute("aria-label", "Kategorien öffnen");
+            button.setAttribute("aria-expanded", "false");
+            button.innerHTML = "<span>Kategorien</span>";
+            host.insertBefore(button, host.firstChild);
+        }
+
+        if (!button) return null;
+
+        /* Mobil muss der Button in der sichtbaren Top Bar liegen –
+           niemals in der ausgeblendeten Kategorienavigation. */
+        if (window.innerWidth < 768 && host && button.parentNode !== host) {
+            host.insertBefore(button, host.firstChild);
+        }
+
+        if (button.dataset.preisLandoDirectDrawer !== "1") {
+            button.dataset.preisLandoDirectDrawer = "1";
+
+            /* Capture: verhindert Doppel-Toggle durch ältere CustomJS-Handler. */
+            button.addEventListener("click", function (event) {
+                if (window.innerWidth >= 768) return;
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                toggleMobileDrawer();
+            }, true);
+        }
+
+        return button;
+    }
+
     window.addEventListener("preislando:mobile-menu-toggle", toggleMobileDrawer);
     window.addEventListener("preislando:mobile-menu-close", closeMobileDrawer);
 
@@ -821,6 +882,7 @@
             if (!topList) return;
 
             buildMobileDrawer(categories);
+            ensureMobileMenuButton();
 
             if (!isHoverMode()) {
                 closeAllHoverMenus();
@@ -842,6 +904,7 @@
     }
 
     function start() {
+        ensureMobileMenuButton();
         initializeHoverNavigation();
 
         const observer = new MutationObserver(function () {

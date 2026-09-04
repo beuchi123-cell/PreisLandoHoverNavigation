@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.2";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.2");
-    console.info("[PreisLandoHoverNavigation] v1.4.2 geladen");
+    window.PreisLandoHoverVersion = "1.4.3";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.3");
+    console.info("[PreisLandoHoverNavigation] v1.4.3 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -372,6 +372,10 @@
             box.classList.remove("is-hover-active");
         });
 
+        document.querySelectorAll(".preis-lando-navigation-root").forEach(function (root) {
+            root.classList.remove("preis-lando-hover-open");
+        });
+
         activeHoverBox = null;
     }
 
@@ -383,6 +387,7 @@
         if (menu) menu.classList.remove("is-visible", "is-loading");
 
         activeHoverBox.classList.remove("is-hover-active");
+        if (topList) topList.classList.remove("preis-lando-hover-open");
         activeHoverBox = null;
     }
 
@@ -539,6 +544,7 @@
 
             activeHoverBox = box;
             setActiveCategory(topList, box);
+            topList.classList.add("preis-lando-hover-open");
 
             const menu = getOrCreateSharedMenu(topList);
             updateSharedMenuPointer(topList, box, menu);
@@ -611,66 +617,78 @@
     }
 
     /* =====================================================
-       MOBILE DRAWER – OTTO-ARTIGES MINI-MENÜ
+       MOBILE DRAWER – DIALOG / TOP LAYER
+       Liegt technisch immer vor Header, Banner und Shopinhalt.
        ===================================================== */
+
+    function getMobileDialog() {
+        return document.querySelector("dialog.preis-lando-mobile-drawer");
+    }
+
+    function setMobileButtonState(open) {
+        document.querySelectorAll(".kategorie-mobile-button").forEach(function (button) {
+            button.classList.toggle("is-open", !!open);
+            button.setAttribute("aria-expanded", open ? "true" : "false");
+        });
+    }
 
     function closeMobileDrawer() {
         document.documentElement.classList.remove("preis-lando-mobile-menu-open");
         document.body.classList.remove("preis-lando-mobile-menu-open");
 
-        const drawer = document.querySelector(".preis-lando-mobile-drawer");
-        const backdrop = document.querySelector(".preis-lando-mobile-backdrop");
-        if (drawer) drawer.classList.remove("is-open");
-        if (backdrop) backdrop.classList.remove("is-open");
+        const dialog = getMobileDialog();
+        if (dialog && dialog.open) {
+            dialog.classList.remove("is-open");
+            window.setTimeout(function () {
+                if (dialog.open) dialog.close();
+            }, 160);
+        }
 
-        document.querySelectorAll(".kategorie-mobile-button").forEach(function (button) {
-            button.classList.remove("is-open");
-            button.setAttribute("aria-expanded", "false");
-        });
+        setMobileButtonState(false);
     }
 
     function openMobileDrawer() {
         if (isHoverMode()) return;
 
-        const drawer = document.querySelector(".preis-lando-mobile-drawer");
-        const backdrop = document.querySelector(".preis-lando-mobile-backdrop");
-        if (!drawer || !backdrop) return;
+        const dialog = getMobileDialog();
+        if (!dialog) return;
 
-        drawer.classList.add("is-open");
-        backdrop.classList.add("is-open");
+        if (!dialog.open) {
+            try {
+                dialog.showModal();
+            } catch (error) {
+                dialog.setAttribute("open", "");
+            }
+        }
+
+        requestAnimationFrame(function () {
+            dialog.classList.add("is-open");
+        });
+
         document.documentElement.classList.add("preis-lando-mobile-menu-open");
         document.body.classList.add("preis-lando-mobile-menu-open");
-
-        document.querySelectorAll(".kategorie-mobile-button").forEach(function (button) {
-            button.classList.add("is-open");
-            button.setAttribute("aria-expanded", "true");
-        });
+        setMobileButtonState(true);
     }
 
     function toggleMobileDrawer() {
-        const drawer = document.querySelector(".preis-lando-mobile-drawer");
-        if (!drawer) return;
-        if (drawer.classList.contains("is-open")) closeMobileDrawer();
+        const dialog = getMobileDialog();
+        if (!dialog) return;
+        if (dialog.open && dialog.classList.contains("is-open")) closeMobileDrawer();
         else openMobileDrawer();
     }
 
     function buildMobileDrawer(categories) {
         if (!Array.isArray(categories) || !categories.length) return;
 
-        let backdrop = document.querySelector(".preis-lando-mobile-backdrop");
-        let drawer = document.querySelector(".preis-lando-mobile-drawer");
+        let dialog = getMobileDialog();
 
-        if (!backdrop) {
-            backdrop = document.createElement("div");
-            backdrop.className = "preis-lando-mobile-backdrop";
-            backdrop.addEventListener("click", closeMobileDrawer);
-            document.body.appendChild(backdrop);
-        }
+        if (!dialog) {
+            dialog = document.createElement("dialog");
+            dialog.className = "preis-lando-mobile-drawer";
+            dialog.setAttribute("aria-label", "Kategorien");
 
-        if (!drawer) {
-            drawer = document.createElement("aside");
-            drawer.className = "preis-lando-mobile-drawer";
-            drawer.setAttribute("aria-label", "Kategorien");
+            const panel = document.createElement("div");
+            panel.className = "preis-lando-mobile-drawer-panel";
 
             const head = document.createElement("div");
             head.className = "preis-lando-mobile-drawer-head";
@@ -691,12 +709,29 @@
             const list = document.createElement("div");
             list.className = "preis-lando-mobile-drawer-list";
 
-            drawer.appendChild(head);
-            drawer.appendChild(list);
-            document.body.appendChild(drawer);
+            panel.appendChild(head);
+            panel.appendChild(list);
+            dialog.appendChild(panel);
+            document.body.appendChild(dialog);
+
+            dialog.addEventListener("cancel", function (event) {
+                event.preventDefault();
+                closeMobileDrawer();
+            });
+
+            dialog.addEventListener("click", function (event) {
+                if (event.target === dialog) closeMobileDrawer();
+            });
+
+            dialog.addEventListener("close", function () {
+                dialog.classList.remove("is-open");
+                document.documentElement.classList.remove("preis-lando-mobile-menu-open");
+                document.body.classList.remove("preis-lando-mobile-menu-open");
+                setMobileButtonState(false);
+            });
         }
 
-        const list = drawer.querySelector(".preis-lando-mobile-drawer-list");
+        const list = dialog.querySelector(".preis-lando-mobile-drawer-list");
         if (!list || list.dataset.ready === "1") return;
 
         categories.forEach(function (category) {
@@ -750,16 +785,13 @@
                     sub.innerHTML = "";
                     loaded = true;
 
-                    if (!children || !children.length) {
-                        const direct = document.createElement("a");
-                        direct.className = "preis-lando-mobile-sub-link";
-                        direct.href = getCategoryUrl(category);
-                        direct.textContent = "Alle anzeigen";
-                        sub.appendChild(direct);
-                        return;
-                    }
+                    const allLink = document.createElement("a");
+                    allLink.className = "preis-lando-mobile-sub-link preis-lando-mobile-all-link";
+                    allLink.href = getCategoryUrl(category);
+                    allLink.textContent = "Alle anzeigen";
+                    sub.appendChild(allLink);
 
-                    children.forEach(function (child) {
+                    (children || []).forEach(function (child) {
                         const childLink = document.createElement("a");
                         childLink.className = "preis-lando-mobile-sub-link";
                         childLink.href = getCategoryUrl(child);

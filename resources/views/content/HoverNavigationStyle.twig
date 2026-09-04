@@ -1,7 +1,7 @@
 <style>
 /* =========================================================
    PREISLANDO GRID-NAVIGATION + GEMEINSAMES HOVER-FELD
-   Version 1.4.2
+   Version 1.4.3
 
    Prinzip:
    - Hauptkategorien und Hover-Unterkategorien liegen im selben Grid.
@@ -38,6 +38,11 @@
 .preis-lando-navigation-root > .preis-lando-original-root {
     display: none !important;
 }
+
+.preis-lando-navigation-root.preis-lando-hover-open {
+    background: #f1f1f1 !important;
+}
+
 
 .preis-lando-navigation-root > .preis-lando-nav-category {
     position: static !important;
@@ -119,23 +124,11 @@
     z-index: 10 !important;
 }
 
-/* Graue Verbindung unter der aktuell gehoverteten Hauptkategorie.
-   Position/Breite setzt das JavaScript passend zur aktiven Grid-Zelle. */
+/* Der graue Anschluss entsteht jetzt über den gemeinsamen Grid-Hintergrund.
+   Dadurch werden auch die freien Felder unter Spalte 1 und 6 grau und
+   der Hoverbereich wirkt wie eine zusammenhängende Tabelle. */
 .preis-lando-hover-menu::before {
-    content: "" !important;
-    position: absolute !important;
-    left: var(--pl-active-left, 0px) !important;
-    top: -9px !important;
-    width: var(--pl-active-width, 0px) !important;
-    height: 10px !important;
-    background: #f1f1f1 !important;
-    border-left: 1px solid #d5d5d5 !important;
-    border-right: 1px solid #d5d5d5 !important;
-    border-top: 1px solid #d5d5d5 !important;
-    border-bottom: 0 !important;
-    box-sizing: border-box !important;
-    z-index: 12 !important;
-    pointer-events: none !important;
+    display: none !important;
 }
 
 .preis-lando-hover-menu.is-visible {
@@ -319,40 +312,43 @@
     }
 }
 
-.preis-lando-mobile-backdrop {
-    display: block !important;
+.preis-lando-mobile-drawer {
     position: fixed !important;
     inset: 0 !important;
-    background: rgba(0,0,0,.38) !important;
-    opacity: 0 !important;
-    visibility: hidden !important;
-    transition: opacity .2s ease, visibility .2s ease !important;
-    z-index: 99998 !important;
+    width: 100vw !important;
+    max-width: none !important;
+    height: 100dvh !important;
+    max-height: 100dvh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    z-index: 2147483647 !important;
 }
 
-.preis-lando-mobile-backdrop.is-open {
-    opacity: 1 !important;
-    visibility: visible !important;
+.preis-lando-mobile-drawer::backdrop {
+    background: rgba(0,0,0,.42) !important;
 }
 
-.preis-lando-mobile-drawer {
+.preis-lando-mobile-drawer-panel {
     display: flex !important;
-    position: fixed !important;
+    position: absolute !important;
     top: 0 !important;
     left: 0 !important;
     bottom: 0 !important;
     width: min(88vw, 360px) !important;
     max-width: 360px !important;
+    height: 100dvh !important;
     flex-direction: column !important;
     background: #fff !important;
-    box-shadow: 5px 0 18px rgba(0,0,0,.22) !important;
+    box-shadow: 5px 0 18px rgba(0,0,0,.24) !important;
     transform: translateX(-105%) !important;
-    transition: transform .22s ease !important;
-    z-index: 99999 !important;
+    transition: transform .16s ease !important;
     overflow: hidden !important;
 }
 
-.preis-lando-mobile-drawer.is-open {
+.preis-lando-mobile-drawer.is-open .preis-lando-mobile-drawer-panel {
     transform: translateX(0) !important;
 }
 
@@ -384,6 +380,7 @@
 
 .preis-lando-mobile-drawer-list {
     flex: 1 1 auto !important;
+    min-height: 0 !important;
     overflow-y: auto !important;
     overscroll-behavior: contain !important;
     background: #fff !important;
@@ -460,13 +457,16 @@
     box-sizing: border-box !important;
 }
 
+.preis-lando-mobile-all-link {
+    font-weight: 700 !important;
+}
+
 html.preis-lando-mobile-menu-open,
 body.preis-lando-mobile-menu-open {
     overflow: hidden !important;
 }
 
 @media (min-width: 768px) {
-    .preis-lando-mobile-backdrop,
     .preis-lando-mobile-drawer {
         display: none !important;
     }

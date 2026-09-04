@@ -12,15 +12,15 @@
     const ROOT_CATEGORY_PATH = "/neuetischkultur-sw5";
     const ROOT_CATEGORY_NAME = "neuetischkultur sw5";
 
-    const DESKTOP_BREAKPOINT = 1200;
+    const HOVER_BREAKPOINT = 768;
     const MAX_CHILDREN = 100;
     const HOVER_OPEN_DELAY = 120;
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.3.2";
-document.documentElement.setAttribute("data-preislando-hover-version", "1.3.2");
-console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
+    window.PreisLandoHoverVersion = "1.4.0";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.0");
+    console.info("[PreisLandoHoverNavigation] v1.4.0 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -36,8 +36,8 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
     const imagePreloadQueue = [];
     let activeImagePreloads = 0;
 
-    function isDesktop() {
-        return window.innerWidth >= DESKTOP_BREAKPOINT;
+    function isHoverMode() {
+        return window.innerWidth >= HOVER_BREAKPOINT;
     }
 
     function normalizePath(url) {
@@ -335,7 +335,9 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
     }
 
     /* =====================================================
-       HOVER / MENÜ
+       GEMEINSAMES RASTER / HOVER-MENÜ
+       Der Hover-Bereich ist EIN gemeinsames Grid-Element unter
+       allen Hauptkategorien. Er hängt nicht mehr an einem einzelnen LI.
        ===================================================== */
 
     function cancelHoverOpen() {
@@ -352,12 +354,18 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
         }
     }
 
+    function getSharedMenu(topList) {
+        return topList
+            ? topList.querySelector(":scope > .preis-lando-hover-menu")
+            : null;
+    }
+
     function closeAllHoverMenus() {
         cancelHoverOpen();
         cancelHoverClose();
 
         document.querySelectorAll(".preis-lando-hover-menu").forEach(function (menu) {
-            menu.classList.remove("is-visible", "has-notch");
+            menu.classList.remove("is-visible", "is-loading", "is-empty");
         });
 
         document.querySelectorAll(".preis-lando-hover-parent").forEach(function (box) {
@@ -370,8 +378,9 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
     function closeActiveHoverMenu() {
         if (!activeHoverBox) return;
 
-        const menu = activeHoverBox.querySelector(":scope > .preis-lando-hover-menu");
-        if (menu) menu.classList.remove("is-visible", "has-notch");
+        const topList = activeHoverBox.closest(".preis-lando-navigation-root");
+        const menu = getSharedMenu(topList);
+        if (menu) menu.classList.remove("is-visible", "is-loading");
 
         activeHoverBox.classList.remove("is-hover-active");
         activeHoverBox = null;
@@ -383,44 +392,13 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
         });
     }
 
-    function positionMegaMenu(topList, box, menu) {
-        const listRect = topList.getBoundingClientRect();
-        const boxRect = box.getBoundingClientRect();
-        const boxes = getGeneratedBoxes(topList);
-        if (!boxes.length) return;
-
-        const rowTops = [];
-        boxes.forEach(function (entry) {
-            const top = Math.round(entry.getBoundingClientRect().top);
-            if (!rowTops.includes(top)) rowTops.push(top);
-        });
-        rowTops.sort(function (a, b) { return a - b; });
-
-        const currentTop = Math.round(boxRect.top);
-        const currentRowIndex = rowTops.indexOf(currentTop);
-
-        menu.style.setProperty(
-            "--pl-notch-left",
-            (boxRect.left - listRect.left) + "px"
-        );
-        menu.style.setProperty("--pl-notch-width", boxRect.width + "px");
-
-        if (currentRowIndex === 0 && rowTops.length > 1) {
-            const secondRowTop = rowTops[1];
-            const firstRowHeight = Math.max(28, secondRowTop - rowTops[0]);
-            menu.style.setProperty("--pl-notch-height", firstRowHeight + "px");
-            menu.classList.add("has-notch");
-        } else {
-            menu.classList.remove("has-notch");
-        }
-    }
-
-    function getOrCreateMenu(box) {
-        let menu = box.querySelector(":scope > .preis-lando-hover-menu");
+    function getOrCreateSharedMenu(topList) {
+        let menu = getSharedMenu(topList);
         if (menu) return menu;
 
-        menu = document.createElement("div");
+        menu = document.createElement("li");
         menu.className = "preis-lando-hover-menu";
+        menu.setAttribute("aria-live", "polite");
 
         const closeButton = document.createElement("button");
         closeButton.type = "button";
@@ -442,17 +420,19 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
 
         menu.addEventListener("mouseenter", function () {
             cancelHoverClose();
-            activeHoverBox = box;
         });
 
         menu.addEventListener("mouseleave", function () {
             cancelHoverClose();
             hoverCloseTimer = setTimeout(function () {
-                if (activeHoverBox === box) closeActiveHoverMenu();
+                closeActiveHoverMenu();
             }, HOVER_CLOSE_DELAY);
         });
 
-        box.appendChild(menu);
+        const originalRoot = topList.querySelector(":scope > .preis-lando-original-root");
+        if (originalRoot) topList.insertBefore(menu, originalRoot);
+        else topList.appendChild(menu);
+
         return menu;
     }
 
@@ -533,38 +513,39 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
         box.dataset.preisLandoHoverReady = "1";
 
         function openMenu() {
-            if (!isDesktop()) return;
+            if (!isHoverMode()) return;
 
             cancelHoverClose();
 
             if (activeHoverBox && activeHoverBox !== box) {
-                const oldMenu = activeHoverBox.querySelector(":scope > .preis-lando-hover-menu");
-                if (oldMenu) oldMenu.classList.remove("is-visible", "has-notch");
                 activeHoverBox.classList.remove("is-hover-active");
             }
 
             activeHoverBox = box;
             setActiveCategory(topList, box);
 
-            const menu = getOrCreateMenu(box);
-            positionMegaMenu(topList, box, menu);
+            const menu = getOrCreateSharedMenu(topList);
+            const categoryId = String(category.id);
 
-            if (menu.dataset.loaded === "1") {
+            if (menu.dataset.categoryId === categoryId && menu.dataset.loaded === "1") {
                 if (!menu.classList.contains("is-empty")) menu.classList.add("is-visible");
                 return;
             }
 
+            menu.dataset.categoryId = categoryId;
+            menu.dataset.loaded = "0";
             showLoading(menu);
 
             loadCategoryChildren(category.id).then(function (children) {
+                if (activeHoverBox !== box || menu.dataset.categoryId !== categoryId) return;
+
                 menu.dataset.loaded = "1";
                 renderChildren(menu, children);
-                if (activeHoverBox !== box) menu.classList.remove("is-visible");
             });
         }
 
         box.addEventListener("mouseenter", function () {
-            if (!isDesktop()) return;
+            if (!isHoverMode()) return;
             cancelHoverOpen();
             cancelHoverClose();
             hoverOpenTimer = setTimeout(function () {
@@ -573,8 +554,13 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
             }, HOVER_OPEN_DELAY);
         });
 
-        box.addEventListener("mouseleave", function () {
+        box.addEventListener("mouseleave", function (event) {
+            if (!isHoverMode()) return;
             cancelHoverOpen();
+
+            const menu = getSharedMenu(topList);
+            if (menu && event.relatedTarget && menu.contains(event.relatedTarget)) return;
+
             cancelHoverClose();
             hoverCloseTimer = setTimeout(function () {
                 if (activeHoverBox === box) closeActiveHoverMenu();
@@ -583,7 +569,7 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
     }
 
     function preloadHoverImages(categories) {
-        if (!isDesktop() || !Array.isArray(categories)) return;
+        if (!isHoverMode() || !Array.isArray(categories)) return;
 
         categories.forEach(function (mainCategory) {
             if (!mainCategory || !mainCategory.id) return;
@@ -612,17 +598,17 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
        ===================================================== */
 
     function initializeHoverNavigation() {
-        if (!isDesktop()) {
-            closeAllHoverMenus();
-            return;
-        }
-
         const rootLink = findRootLink();
         if (!rootLink) return;
 
         loadRootCategories().then(function (categories) {
             const topList = buildPromotedNavigation(rootLink, categories);
             if (!topList) return;
+
+            if (!isHoverMode()) {
+                closeAllHoverMenus();
+                return;
+            }
 
             if (topList.dataset.preisLandoPreloadStarted !== "1") {
                 topList.dataset.preisLandoPreloadStarted = "1";
@@ -642,7 +628,7 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
         initializeHoverNavigation();
 
         const observer = new MutationObserver(function () {
-            if (isDesktop()) scheduleInitialize();
+            scheduleInitialize();
         });
 
         observer.observe(document.body, {
@@ -654,8 +640,8 @@ console.info("[PreisLandoHoverNavigation] v1.3.2 geladen");
         window.addEventListener("resize", function () {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function () {
-                if (isDesktop()) initializeHoverNavigation();
-                else closeAllHoverMenus();
+                initializeHoverNavigation();
+                if (!isHoverMode()) closeAllHoverMenus();
             }, 100);
         });
     }

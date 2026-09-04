@@ -1,0 +1,772 @@
+<script>
+(function () {
+    "use strict";
+
+    /* =====================================================
+       PREISLANDO HOVER NAVIGATION
+       Standard-Kategorienavigation -> Root 1838 ausblenden
+       und direkte Kinder als sichtbare Hauptnavigation zeigen.
+       ===================================================== */
+
+    const ROOT_CATEGORY_ID = 1838;
+    const ROOT_CATEGORY_PATH = "/neuetischkultur-sw5";
+    const ROOT_CATEGORY_NAME = "neuetischkultur sw5";
+
+    const DESKTOP_BREAKPOINT = 1200;
+    const MAX_CHILDREN = 100;
+    const HOVER_OPEN_DELAY = 120;
+    const HOVER_CLOSE_DELAY = 350;
+    const IMAGE_PRELOAD_CONCURRENCY = 4;
+
+    window.PreisLandoHoverVersion = "1.3.0";
+
+    let hoverOpenTimer = null;
+    let hoverCloseTimer = null;
+    let activeHoverBox = null;
+    let initializeTimer = null;
+    let rootCategoriesPromise = null;
+
+    const childCache = {};
+    const childRequests = {};
+    const categoryImageCache = {};
+    const categoryImageRequests = {};
+
+    const imagePreloadQueue = [];
+    let activeImagePreloads = 0;
+
+    function isDesktop() {
+        return window.innerWidth >= DESKTOP_BREAKPOINT;
+    }
+
+    function normalizePath(url) {
+        if (!url) return "";
+
+        try {
+            return new URL(url, window.location.origin)
+                .pathname
+                .replace(/\/+/g, "/")
+                .replace(/\/$/, "")
+                .toLowerCase();
+        } catch (error) {
+            return String(url)
+                .split("?")[0]
+                .split("#")[0]
+                .replace(/\/+/g, "/")
+                .replace(/\/$/, "")
+                .toLowerCase();
+        }
+    }
+
+    function getCategoryName(category) {
+        return category && category.details && category.details[0]
+            ? (category.details[0].name || "")
+            : "";
+    }
+
+    function getCategoryUrl(category) {
+        if (!category || !category.url) return "#";
+
+        let url = String(category.url);
+        if (url.charAt(0) !== "/") url = "/" + url;
+
+        if (
+            typeof App !== "undefined" &&
+            App.urls &&
+            App.urls.includeLanguage &&
+            App.language
+        ) {
+            const languagePrefix = "/" + App.language;
+            if (url !== languagePrefix && url.indexOf(languagePrefix + "/") !== 0) {
+                url = languagePrefix + url;
+            }
+        }
+
+        return url;
+    }
+
+    function fetchCategoryChildren(categoryId) {
+        const url =
+            "/rest/io/categorytree/children" +
+            "?categoryId=" + encodeURIComponent(categoryId) +
+            "&indexStart=0" +
+            "&maxCount=" + MAX_CHILDREN;
+
+        return fetch(url, {
+            credentials: "same-origin",
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error("HTTP " + response.status);
+                return response.json();
+            })
+            .then(function (response) {
+                if (response && Array.isArray(response.data)) return response.data;
+                if (Array.isArray(response)) return response;
+                return [];
+            });
+    }
+
+    function loadCategoryChildren(categoryId) {
+        if (Object.prototype.hasOwnProperty.call(childCache, categoryId)) {
+            return Promise.resolve(childCache[categoryId]);
+        }
+
+        if (childRequests[categoryId]) return childRequests[categoryId];
+
+        childRequests[categoryId] = fetchCategoryChildren(categoryId)
+            .then(function (children) {
+                childCache[categoryId] = Array.isArray(children) ? children : [];
+                return childCache[categoryId];
+            })
+            .catch(function (error) {
+                console.error(
+                    "PreisLando HoverNavigation: Unterkategorien konnten nicht geladen werden.",
+                    categoryId,
+                    error
+                );
+                childCache[categoryId] = [];
+                return [];
+            })
+            .finally(function () {
+                delete childRequests[categoryId];
+            });
+
+        return childRequests[categoryId];
+    }
+
+    function loadRootCategories() {
+        if (!rootCategoriesPromise) {
+            rootCategoriesPromise = loadCategoryChildren(ROOT_CATEGORY_ID);
+        }
+        return rootCategoriesPromise;
+    }
+
+    function getCategoryImage(category) {
+        if (!category || !category.details || !category.details[0]) return "";
+
+        const details = category.details[0];
+        let imagePath = details.image2Path || details.imagePath || "";
+        if (!imagePath) return "";
+
+        if (/^https?:\/\//i.test(imagePath)) return imagePath;
+
+        imagePath = imagePath.replace(/^\/+/, "");
+        return imagePath.indexOf("documents/") === 0
+            ? "/" + imagePath
+            : "/documents/" + imagePath;
+    }
+
+    function loadFallbackCategoryImage(category) {
+        if (!category || !category.id) return Promise.resolve("");
+
+        const categoryId = category.id;
+
+        if (Object.prototype.hasOwnProperty.call(categoryImageCache, categoryId)) {
+            return Promise.resolve(categoryImageCache[categoryId]);
+        }
+
+        if (categoryImageRequests[categoryId]) {
+            return categoryImageRequests[categoryId];
+        }
+
+        const url = "/rest/preislando/category-image/" + encodeURIComponent(categoryId);
+
+        categoryImageRequests[categoryId] = fetch(url, {
+            credentials: "same-origin",
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+        })
+            .then(function (response) {
+                if (!response.ok) throw new Error("Kategorie-Bild HTTP " + response.status);
+                return response.json();
+            })
+            .then(function (data) {
+                const image = data && data.success && data.image ? data.image : "";
+                categoryImageCache[categoryId] = image;
+                return image;
+            })
+            .catch(function (error) {
+                console.warn(
+                    "PreisLando HoverNavigation: Kategorie-Bild konnte nicht geladen werden",
+                    categoryId,
+                    error
+                );
+                categoryImageCache[categoryId] = "";
+                return "";
+            })
+            .finally(function () {
+                delete categoryImageRequests[categoryId];
+            });
+
+        return categoryImageRequests[categoryId];
+    }
+
+    function runImagePreloadQueue() {
+        while (
+            activeImagePreloads < IMAGE_PRELOAD_CONCURRENCY &&
+            imagePreloadQueue.length
+        ) {
+            const job = imagePreloadQueue.shift();
+            activeImagePreloads++;
+
+            Promise.resolve()
+                .then(job)
+                .catch(function () {})
+                .finally(function () {
+                    activeImagePreloads--;
+                    runImagePreloadQueue();
+                });
+        }
+    }
+
+    function queueImagePreload(job) {
+        imagePreloadQueue.push(job);
+        runImagePreloadQueue();
+    }
+
+    function preloadImage(url) {
+        if (!url) return Promise.resolve();
+        return new Promise(function (resolve) {
+            const img = new Image();
+            let done = false;
+            function finish() {
+                if (done) return;
+                done = true;
+                resolve();
+            }
+            img.onload = finish;
+            img.onerror = finish;
+            img.src = url;
+            if (img.complete) finish();
+        });
+    }
+
+    /* =====================================================
+       STANDARDNAVIGATION FINDEN
+       ===================================================== */
+
+    function findRootLink() {
+        const preferred = document.querySelector(".preis-lando-navigation");
+        const scope = preferred || document;
+
+        const links = Array.from(scope.querySelectorAll("li.ddown > a, a"));
+
+        return links.find(function (link) {
+            const path = normalizePath(link.getAttribute("href") || link.href);
+            const text = (link.textContent || "").trim().toLowerCase();
+
+            return path === ROOT_CATEGORY_PATH ||
+                path.endsWith(ROOT_CATEGORY_PATH) ||
+                text === ROOT_CATEGORY_NAME;
+        }) || null;
+    }
+
+    function findTopList(rootLink) {
+        if (!rootLink) return null;
+        const rootLi = rootLink.closest("li");
+        if (!rootLi) return null;
+        return rootLi.parentElement && rootLi.parentElement.tagName === "UL"
+            ? rootLi.parentElement
+            : null;
+    }
+
+    function getGeneratedBoxes(topList) {
+        return Array.from(
+            topList.querySelectorAll(":scope > li.preis-lando-nav-category")
+        );
+    }
+
+    function categoryMatchesLink(category, link) {
+        const categoryPath = normalizePath(getCategoryUrl(category));
+        const linkPath = normalizePath(link.getAttribute("href") || link.href);
+
+        if (categoryPath && linkPath && (
+            categoryPath === linkPath ||
+            linkPath.endsWith(categoryPath) ||
+            categoryPath.endsWith(linkPath)
+        )) {
+            return true;
+        }
+
+        return getCategoryName(category).trim().toLowerCase() ===
+            (link.textContent || "").trim().toLowerCase();
+    }
+
+    /* =====================================================
+       HAUPTKATEGORIEN AUS ROOT HOCHZIEHEN
+       ===================================================== */
+
+    function buildPromotedNavigation(rootLink, categories) {
+        const rootLi = rootLink.closest("li");
+        const topList = findTopList(rootLink);
+
+        if (!rootLi || !topList || !categories.length) return null;
+
+        topList.classList.add("preis-lando-navigation-root");
+        rootLi.classList.add("preis-lando-original-root");
+
+        if (topList.dataset.preisLandoPromoted === "1") {
+            return topList;
+        }
+
+        categories.forEach(function (category) {
+            if (!category || !category.id) return;
+
+            const box = document.createElement("li");
+            box.className =
+                "preis-lando-nav-category preis-lando-hover-parent";
+            box.dataset.categoryId = String(category.id);
+
+            const link = document.createElement("a");
+            link.className = "preis-lando-nav-link";
+            link.href = getCategoryUrl(category);
+            link.setAttribute("itemprop", "name");
+            link.textContent = getCategoryName(category);
+
+            box.appendChild(link);
+            topList.insertBefore(box, rootLi);
+
+            prepareCategoryBox(topList, box, category);
+        });
+
+        topList.dataset.preisLandoPromoted = "1";
+        return topList;
+    }
+
+    /* =====================================================
+       HOVER / MENÜ
+       ===================================================== */
+
+    function cancelHoverOpen() {
+        if (hoverOpenTimer) {
+            clearTimeout(hoverOpenTimer);
+            hoverOpenTimer = null;
+        }
+    }
+
+    function cancelHoverClose() {
+        if (hoverCloseTimer) {
+            clearTimeout(hoverCloseTimer);
+            hoverCloseTimer = null;
+        }
+    }
+
+    function closeAllHoverMenus() {
+        cancelHoverOpen();
+        cancelHoverClose();
+
+        document.querySelectorAll(".preis-lando-hover-menu").forEach(function (menu) {
+            menu.classList.remove("is-visible", "has-notch");
+        });
+
+        document.querySelectorAll(".preis-lando-hover-parent").forEach(function (box) {
+            box.classList.remove("is-hover-active");
+        });
+
+        activeHoverBox = null;
+    }
+
+    function closeActiveHoverMenu() {
+        if (!activeHoverBox) return;
+
+        const menu = activeHoverBox.querySelector(":scope > .preis-lando-hover-menu");
+        if (menu) menu.classList.remove("is-visible", "has-notch");
+
+        activeHoverBox.classList.remove("is-hover-active");
+        activeHoverBox = null;
+    }
+
+    function setActiveCategory(topList, box) {
+        getGeneratedBoxes(topList).forEach(function (entry) {
+            entry.classList.toggle("is-hover-active", entry === box);
+        });
+    }
+
+    function positionMegaMenu(topList, box, menu) {
+        const listRect = topList.getBoundingClientRect();
+        const boxRect = box.getBoundingClientRect();
+        const boxes = getGeneratedBoxes(topList);
+        if (!boxes.length) return;
+
+        const rowTops = [];
+        boxes.forEach(function (entry) {
+            const top = Math.round(entry.getBoundingClientRect().top);
+            if (!rowTops.includes(top)) rowTops.push(top);
+        });
+        rowTops.sort(function (a, b) { return a - b; });
+
+        const currentTop = Math.round(boxRect.top);
+        const currentRowIndex = rowTops.indexOf(currentTop);
+
+        menu.style.setProperty(
+            "--pl-notch-left",
+            (boxRect.left - listRect.left) + "px"
+        );
+        menu.style.setProperty("--pl-notch-width", boxRect.width + "px");
+
+        if (currentRowIndex === 0 && rowTops.length > 1) {
+            const secondRowTop = rowTops[1];
+            const firstRowHeight = Math.max(28, secondRowTop - rowTops[0]);
+            menu.style.setProperty("--pl-notch-height", firstRowHeight + "px");
+            menu.classList.add("has-notch");
+        } else {
+            menu.classList.remove("has-notch");
+        }
+    }
+
+    function getOrCreateMenu(box) {
+        let menu = box.querySelector(":scope > .preis-lando-hover-menu");
+        if (menu) return menu;
+
+        menu = document.createElement("div");
+        menu.className = "preis-lando-hover-menu";
+
+        const closeButton = document.createElement("button");
+        closeButton.type = "button";
+        closeButton.className = "preis-lando-hover-close";
+        closeButton.innerHTML =
+            "<span>Schließen</span><span class=\"preis-lando-hover-close-x\">×</span>";
+
+        closeButton.addEventListener("click", function (event) {
+            event.preventDefault();
+            event.stopPropagation();
+            closeAllHoverMenus();
+        });
+
+        const content = document.createElement("div");
+        content.className = "preis-lando-hover-content";
+
+        menu.appendChild(closeButton);
+        menu.appendChild(content);
+
+        menu.addEventListener("mouseenter", function () {
+            cancelHoverClose();
+            activeHoverBox = box;
+        });
+
+        menu.addEventListener("mouseleave", function () {
+            cancelHoverClose();
+            hoverCloseTimer = setTimeout(function () {
+                if (activeHoverBox === box) closeActiveHoverMenu();
+            }, HOVER_CLOSE_DELAY);
+        });
+
+        box.appendChild(menu);
+        return menu;
+    }
+
+    function showLoading(menu) {
+        const content = menu.querySelector(".preis-lando-hover-content");
+        if (!content) return;
+
+        content.innerHTML = "";
+        menu.classList.remove("is-empty");
+        menu.classList.add("is-loading", "is-visible");
+
+        const loading = document.createElement("div");
+        loading.className = "preis-lando-hover-loading";
+        loading.textContent = "Kategorien werden geladen …";
+        content.appendChild(loading);
+    }
+
+    function createCategoryImageElement(category) {
+        const image = document.createElement("img");
+        image.className = "preis-lando-hover-image";
+        image.alt = getCategoryName(category);
+        image.loading = "lazy";
+
+        const directImage = getCategoryImage(category);
+        if (directImage) {
+            image.src = directImage;
+            return image;
+        }
+
+        image.classList.add("preis-lando-hover-image-empty");
+        image.style.visibility = "hidden";
+
+        loadFallbackCategoryImage(category).then(function (fallbackImage) {
+            if (!fallbackImage) return;
+            image.src = fallbackImage;
+            image.classList.remove("preis-lando-hover-image-empty");
+            image.style.visibility = "visible";
+        });
+
+        return image;
+    }
+
+    function renderChildren(menu, children) {
+        const content = menu.querySelector(".preis-lando-hover-content");
+        if (!content) return;
+
+        content.innerHTML = "";
+        menu.classList.remove("is-loading");
+
+        if (!children || !children.length) {
+            menu.classList.add("is-empty");
+            menu.classList.remove("is-visible");
+            return;
+        }
+
+        menu.classList.remove("is-empty");
+
+        children.forEach(function (category) {
+            const item = document.createElement("a");
+            item.className = "preis-lando-hover-item";
+            item.href = getCategoryUrl(category);
+
+            item.appendChild(createCategoryImageElement(category));
+
+            const text = document.createElement("span");
+            text.className = "preis-lando-hover-text";
+            text.textContent = getCategoryName(category);
+            item.appendChild(text);
+
+            content.appendChild(item);
+        });
+
+        menu.classList.add("is-visible");
+    }
+
+    function prepareCategoryBox(topList, box, category) {
+        if (box.dataset.preisLandoHoverReady === "1") return;
+        box.dataset.preisLandoHoverReady = "1";
+
+        function openMenu() {
+            if (!isDesktop()) return;
+
+            cancelHoverClose();
+
+            if (activeHoverBox && activeHoverBox !== box) {
+                const oldMenu = activeHoverBox.querySelector(":scope > .preis-lando-hover-menu");
+                if (oldMenu) oldMenu.classList.remove("is-visible", "has-notch");
+                activeHoverBox.classList.remove("is-hover-active");
+            }
+
+            activeHoverBox = box;
+            setActiveCategory(topList, box);
+
+            const menu = getOrCreateMenu(box);
+            positionMegaMenu(topList, box, menu);
+
+            if (menu.dataset.loaded === "1") {
+                if (!menu.classList.contains("is-empty")) menu.classList.add("is-visible");
+                return;
+            }
+
+            showLoading(menu);
+
+            loadCategoryChildren(category.id).then(function (children) {
+                menu.dataset.loaded = "1";
+                renderChildren(menu, children);
+                if (activeHoverBox !== box) menu.classList.remove("is-visible");
+            });
+        }
+
+        box.addEventListener("mouseenter", function () {
+            if (!isDesktop()) return;
+            cancelHoverOpen();
+            cancelHoverClose();
+            hoverOpenTimer = setTimeout(function () {
+                hoverOpenTimer = null;
+                openMenu();
+            }, HOVER_OPEN_DELAY);
+        });
+
+        box.addEventListener("mouseleave", function () {
+            cancelHoverOpen();
+            cancelHoverClose();
+            hoverCloseTimer = setTimeout(function () {
+                if (activeHoverBox === box) closeActiveHoverMenu();
+            }, HOVER_CLOSE_DELAY);
+        });
+    }
+
+    function preloadHoverImages(categories) {
+        if (!isDesktop() || !Array.isArray(categories)) return;
+
+        categories.forEach(function (mainCategory) {
+            if (!mainCategory || !mainCategory.id) return;
+
+            loadCategoryChildren(mainCategory.id).then(function (children) {
+                children.forEach(function (child) {
+                    if (!child || !child.id) return;
+
+                    const directImage = getCategoryImage(child);
+                    if (directImage) {
+                        queueImagePreload(function () { return preloadImage(directImage); });
+                        return;
+                    }
+
+                    queueImagePreload(function () {
+                        return loadFallbackCategoryImage(child)
+                            .then(function (url) { return preloadImage(url); });
+                    });
+                });
+            });
+        });
+    }
+
+    /* =====================================================
+       INITIALISIERUNG
+       ===================================================== */
+
+    function initializeHoverNavigation() {
+        if (!isDesktop()) {
+            closeAllHoverMenus();
+            return;
+        }
+
+        const rootLink = findRootLink();
+        if (!rootLink) return;
+
+        loadRootCategories().then(function (categories) {
+            const topList = buildPromotedNavigation(rootLink, categories);
+            if (!topList) return;
+
+            if (topList.dataset.preisLandoPreloadStarted !== "1") {
+                topList.dataset.preisLandoPreloadStarted = "1";
+                setTimeout(function () {
+                    preloadHoverImages(categories);
+                }, 1500);
+            }
+        });
+    }
+
+    function scheduleInitialize() {
+        clearTimeout(initializeTimer);
+        initializeTimer = setTimeout(initializeHoverNavigation, 80);
+    }
+
+    function start() {
+        initializeHoverNavigation();
+
+        const observer = new MutationObserver(function () {
+            if (isDesktop()) scheduleInitialize();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        let resizeTimer = null;
+        window.addEventListener("resize", function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function () {
+                if (isDesktop()) initializeHoverNavigation();
+                else closeAllHoverMenus();
+            }, 100);
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", start);
+    } else {
+        start();
+    }
+
+    /* =====================================================
+       PREISLANDO SCHNELLSUCHE – PREISE
+       ===================================================== */
+
+    (function setupAutocompletePrices() {
+        const priceCache = {};
+        const pendingPrices = {};
+
+        function getIdsFromAutocompleteUrl(url) {
+            if (!url) return null;
+
+            const cleanUrl = String(url)
+                .split("?")[0]
+                .replace(/\/+$/, "");
+
+            const match = cleanUrl.match(/_(\d+)_(\d+)$/);
+            if (!match) return null;
+
+            return {
+                itemId: parseInt(match[1], 10),
+                variationId: parseInt(match[2], 10)
+            };
+        }
+
+        function loadVariationPrice(itemId, variationId) {
+            const cacheKey = itemId + "_" + variationId;
+
+            if (Object.prototype.hasOwnProperty.call(priceCache, cacheKey)) {
+                return Promise.resolve(priceCache[cacheKey]);
+            }
+
+            if (pendingPrices[cacheKey]) return pendingPrices[cacheKey];
+
+            const url = "/rest/preislando/search-price/" + encodeURIComponent(variationId);
+
+            pendingPrices[cacheKey] = fetch(url, {
+                credentials: "same-origin",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+                .then(function (response) {
+                    if (!response.ok) throw new Error("Preis HTTP " + response.status);
+                    return response.json();
+                })
+                .then(function (data) {
+                    const price = data && data.success && data.price ? data.price : "";
+                    priceCache[cacheKey] = price;
+                    return price;
+                })
+                .catch(function (error) {
+                    console.warn(
+                        "PreisLando Schnellsuche: Preis konnte nicht geladen werden",
+                        itemId,
+                        variationId,
+                        error
+                    );
+                    priceCache[cacheKey] = "";
+                    return "";
+                })
+                .finally(function () {
+                    delete pendingPrices[cacheKey];
+                });
+
+            return pendingPrices[cacheKey];
+        }
+
+        function getOrCreatePriceElement(link) {
+            let price = link.querySelector(":scope > .preis-lando-search-price");
+            if (price) return price;
+
+            price = document.createElement("span");
+            price.className = "preis-lando-search-price";
+            link.appendChild(price);
+            return price;
+        }
+
+        function prepareAutocompleteItem(link) {
+            if (link.dataset.preisLandoPriceReady === "1") return;
+
+            const ids = getIdsFromAutocompleteUrl(link.getAttribute("href"));
+            if (!ids) return;
+
+            link.dataset.preisLandoPriceReady = "1";
+            const priceElement = getOrCreatePriceElement(link);
+            priceElement.textContent = "";
+
+            loadVariationPrice(ids.itemId, ids.variationId).then(function (price) {
+                if (price) priceElement.textContent = price;
+            });
+        }
+
+        function initializeAutocompletePrices() {
+            document.querySelectorAll(
+                ".autocomplete-suggestions a.autocomplete-suggestion"
+            ).forEach(prepareAutocompleteItem);
+        }
+
+        const autocompleteObserver = new MutationObserver(initializeAutocompletePrices);
+        autocompleteObserver.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        initializeAutocompletePrices();
+    })();
+})();
+</script>

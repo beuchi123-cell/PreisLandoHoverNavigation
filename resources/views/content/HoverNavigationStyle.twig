@@ -628,4 +628,42 @@ body.preis-lando-mobile-menu-open {
     .preis-lando-mobile-tile-image-wrap.is-empty { visibility: hidden !important; }
 }
 
+
+
+/* =========================================================
+   v1.4.8 – Desktop ohne Layoutsprung + mobiler Drawer ohne Abdunklung
+   ========================================================= */
+@media (min-width: 768px) {
+    html {
+        scrollbar-gutter: stable !important;
+    }
+
+    .preis-lando-navigation-root
+    .preis-lando-nav-category.preis-lando-hover-under-active {
+        pointer-events: none !important;
+        cursor: default !important;
+    }
+
+    .preis-lando-navigation-root
+    .preis-lando-nav-category.preis-lando-hover-under-active
+    > .preis-lando-nav-link {
+        color: transparent !important;
+        text-shadow: none !important;
+        background: #eeeeee !important;
+        pointer-events: none !important;
+        cursor: default !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .preis-lando-mobile-drawer {
+        background: transparent !important;
+        padding-top: var(--pl-mobile-header-height, 114px) !important;
+    }
+
+    .preis-lando-mobile-drawer-panel {
+        height: calc(100dvh - var(--pl-mobile-header-height, 114px)) !important;
+        background: #f3f3f3 !important;
+    }
+}
 </style>

@@ -565,4 +565,67 @@ body.preis-lando-mobile-menu-open {
         background: #e8e8e8 !important;
     }
 }
+
+/* =========================================================
+   v1.4.7 – Desktop-Verbindung + mobiles Kachelmenü
+   ========================================================= */
+@media (min-width: 768px) {
+    .preis-lando-navigation-root .preis-lando-nav-category.preis-lando-hover-under-active > .preis-lando-nav-link {
+        color: transparent !important;
+        text-shadow: none !important;
+        background: #eeeeee !important;
+    }
+    .preis-lando-hover-menu {
+        box-shadow: none !important;
+        border-top: 0 !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .preis-lando-mobile-drawer {
+        position: fixed !important;
+        inset: 0 !important;
+        padding-top: var(--pl-mobile-header-height, 138px) !important;
+        background: rgba(0,0,0,.34) !important;
+        z-index: 2147483000 !important;
+        box-sizing: border-box !important;
+    }
+    .preis-lando-mobile-drawer-panel {
+        position: relative !important;
+        top: auto !important; left: auto !important; bottom: auto !important;
+        width: 100% !important; max-width: none !important;
+        height: calc(100dvh - var(--pl-mobile-header-height, 138px)) !important;
+        background: #f3f3f3 !important;
+        box-shadow: none !important;
+        transform: translateY(-8px) !important;
+        overflow-y: auto !important;
+    }
+    .preis-lando-mobile-drawer.is-open .preis-lando-mobile-drawer-panel { transform: translateY(0) !important; }
+    .preis-lando-mobile-drawer-head { display: none !important; }
+    .preis-lando-mobile-drawer-list.preis-lando-mobile-tile-grid {
+        display: grid !important;
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+        gap: 8px !important; align-content: start !important;
+        padding: 12px !important; background: #f3f3f3 !important;
+        overflow-y: auto !important; box-sizing: border-box !important;
+    }
+    .preis-lando-mobile-tile {
+        display: grid !important; grid-template-columns: minmax(0, 1fr) 74px !important;
+        align-items: center !important; min-width: 0 !important; min-height: 84px !important;
+        padding: 8px 6px 8px 12px !important; border: 0 !important; border-radius: 9px !important;
+        background: #fff !important; color: #222 !important; text-decoration: none !important;
+        overflow: hidden !important; box-sizing: border-box !important;
+    }
+    .preis-lando-mobile-tile-name {
+        min-width: 0 !important; padding-right: 4px !important; font-size: 14px !important;
+        line-height: 18px !important; font-weight: 700 !important; overflow-wrap: anywhere !important;
+    }
+    .preis-lando-mobile-tile-image-wrap {
+        display: flex !important; align-items: center !important; justify-content: center !important;
+        width: 74px !important; height: 68px !important; overflow: hidden !important;
+    }
+    .preis-lando-mobile-tile-image { display: block !important; width: 100% !important; height: 100% !important; object-fit: contain !important; }
+    .preis-lando-mobile-tile-image-wrap.is-empty { visibility: hidden !important; }
+}
+
 </style>

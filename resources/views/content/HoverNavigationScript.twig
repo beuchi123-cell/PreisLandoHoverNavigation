@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.7";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.7");
-    console.info("[PreisLandoHoverNavigation] v1.4.7 geladen");
+    window.PreisLandoHoverVersion = "1.4.8";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.8");
+    console.info("[PreisLandoHoverNavigation] v1.4.8 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -400,6 +400,16 @@
             entry.classList.toggle("is-hover-active", entry === box);
             entry.classList.remove("preis-lando-hover-under-active");
 
+            const entryLink = entry.querySelector(":scope > .preis-lando-nav-link");
+            if (entryLink) {
+                entryLink.removeAttribute("aria-hidden");
+                if (entryLink.dataset.plOriginalTabindex === "__none__") {
+                    entryLink.removeAttribute("tabindex");
+                } else if (entryLink.dataset.plOriginalTabindex !== undefined) {
+                    entryLink.setAttribute("tabindex", entryLink.dataset.plOriginalTabindex);
+                }
+            }
+
             if (!box || entry === box || !activeRect) return;
 
             const entryRect = entry.getBoundingClientRect();
@@ -411,6 +421,18 @@
                 Math.abs(entryCenter - activeCenter) < Math.max(3, activeRect.width * 0.15)
             ) {
                 entry.classList.add("preis-lando-hover-under-active");
+
+                /* Dieser Menüpunkt ist während des Hover-Pfads nur noch
+                   graue Verbindungsfläche und darf nicht anklickbar/fokussierbar sein. */
+                if (entryLink) {
+                    if (entryLink.dataset.plOriginalTabindex === undefined) {
+                        entryLink.dataset.plOriginalTabindex = entryLink.hasAttribute("tabindex")
+                            ? entryLink.getAttribute("tabindex")
+                            : "__none__";
+                    }
+                    entryLink.setAttribute("tabindex", "-1");
+                    entryLink.setAttribute("aria-hidden", "true");
+                }
             }
         });
     }

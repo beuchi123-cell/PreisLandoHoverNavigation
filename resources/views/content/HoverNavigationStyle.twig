@@ -1,7 +1,7 @@
 <style>
 /* =========================================================
    PREISLANDO GRID-NAVIGATION + GEMEINSAMES HOVER-FELD
-   Version 1.4.5
+   Version 1.4.6
 
    Prinzip:
    - Hauptkategorien und Hover-Unterkategorien liegen im selben Grid.
@@ -493,4 +493,76 @@ body.preis-lando-mobile-menu-open {
     }
 }
 
+
+
+/* =========================================================
+   v1.4.6 DESKTOP/TABLET – FLÄCHIGES MENÜ OHNE TABELLENRAHMEN
+   Vorlage: Paint-Mockup vom 05.09.2026
+   ========================================================= */
+@media (min-width: 768px) {
+    /* Oben keinerlei Tabellen-/Zellenrahmen mehr. */
+    .preis-lando-navigation-root .preis-lando-nav-link,
+    .preis-lando-navigation-root > .preis-lando-nav-category:nth-child(1) .preis-lando-nav-link,
+    .preis-lando-navigation-root .preis-lando-nav-link:hover,
+    .preis-lando-navigation-root .preis-lando-nav-link:focus,
+    .preis-lando-navigation-root
+    .preis-lando-hover-parent.is-hover-active
+    > .preis-lando-nav-link,
+    .preis-lando-navigation-root
+    .preis-lando-nav-category.preis-lando-hover-under-active
+    > .preis-lando-nav-link {
+        border: 0 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    /* Weiß bleibt weiß; nur der aktive senkrechte Pfad wird grau. */
+    .preis-lando-navigation-root .preis-lando-nav-link {
+        background: #ffffff !important;
+    }
+
+    .preis-lando-navigation-root
+    .preis-lando-hover-parent.is-hover-active
+    > .preis-lando-nav-link,
+    .preis-lando-navigation-root
+    .preis-lando-nav-category.preis-lando-hover-under-active
+    > .preis-lando-nav-link {
+        background: #eeeeee !important;
+    }
+
+    /* Falls in der zweiten Zeile in dieser Spalte kein echter Menüpunkt liegt,
+       füllt das Root-Pseudo-Element exakt diese Zelle grau auf. */
+    .preis-lando-navigation-root.preis-lando-hover-open::before {
+        top: 32px !important;
+        height: 32px !important;
+        background: #eeeeee !important;
+        border: 0 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+        z-index: 1 !important;
+    }
+
+    /* Hoverfläche als EIN Menü: außen keine Border, innen keine Rasterlinien. */
+    .preis-lando-hover-menu,
+    .preis-lando-hover-content,
+    .preis-lando-hover-item {
+        background: #eeeeee !important;
+    }
+
+    .preis-lando-hover-menu {
+        border: 0 !important;
+        outline: 0 !important;
+    }
+
+    .preis-lando-hover-item {
+        border: 0 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+    }
+
+    .preis-lando-hover-item:hover,
+    .preis-lando-hover-item:focus {
+        background: #e8e8e8 !important;
+    }
+}
 </style>

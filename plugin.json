@@ -1,17 +1,17 @@
 {
-    "name": "PreisLandoHoverNavigation",
-    "namespace": "PreisLandoHoverNavigation",
-    "type": "theme",
-    "version": "1.4.12",
-    "license": "MIT",
-    "description": "Hover-Navigation mit Unterkategorien und Bildern für plentyShop LTS",
-    "author": "PreisLando",
-    "keywords": [
-        "plentyShop LTS",
-        "navigation",
-        "theme",
-        "hover"
-    ],
-    "require": [],
-    "serviceProvider": "PreisLandoHoverNavigation\\Providers\\HoverNavigationServiceProvider"
+  "name": "PreisLandoHoverNavigation",
+  "namespace": "PreisLandoHoverNavigation",
+  "type": "theme",
+  "version": "1.4.13",
+  "license": "MIT",
+  "description": "Hover-Navigation mit Unterkategorien und Bildern für plentyShop LTS",
+  "author": "PreisLando",
+  "keywords": [
+    "plentyShop LTS",
+    "navigation",
+    "theme",
+    "hover"
+  ],
+  "require": [],
+  "serviceProvider": "PreisLandoHoverNavigation\\Providers\\HoverNavigationServiceProvider"
 }

@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.8";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.8");
-    console.info("[PreisLandoHoverNavigation] v1.4.8 geladen");
+    window.PreisLandoHoverVersion = "1.4.10";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.10");
+    console.info("[PreisLandoHoverNavigation] v1.4.10 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -610,6 +610,16 @@
 
         box.addEventListener("mouseenter", function () {
             if (!isHoverMode()) return;
+
+            /* v1.4.10: Die graue Zelle unter der aktiven Hauptkategorie
+               ist nur eine Brücke zum Mega-Menü. Sie darf niemals ihr
+               eigenes Hover-Menü öffnen. */
+            if (box.classList.contains("preis-lando-hover-under-active")) {
+                cancelHoverOpen();
+                cancelHoverClose();
+                return;
+            }
+
             cancelHoverOpen();
             cancelHoverClose();
             hoverOpenTimer = setTimeout(function () {
@@ -623,11 +633,32 @@
             cancelHoverOpen();
 
             const menu = getSharedMenu(topList);
-            if (menu && event.relatedTarget && menu.contains(event.relatedTarget)) return;
+            const related = event.relatedTarget;
+
+            /* Vom aktiven Hauptpunkt in seine graue Brückenzelle:
+               Hover bleibt offen. */
+            if (related && related.closest &&
+                related.closest(".preis-lando-hover-under-active")) {
+                cancelHoverClose();
+                return;
+            }
+
+            /* Von der grauen Brückenzelle ins Mega-Menü:
+               ebenfalls offen lassen. */
+            if (box.classList.contains("preis-lando-hover-under-active")) {
+                if (menu && related && menu.contains(related)) {
+                    cancelHoverClose();
+                    return;
+                }
+            }
+
+            if (menu && related && menu.contains(related)) return;
 
             cancelHoverClose();
             hoverCloseTimer = setTimeout(function () {
-                if (activeHoverBox === box) closeActiveHoverMenu();
+                if (activeHoverBox === box || box.classList.contains("preis-lando-hover-under-active")) {
+                    closeActiveHoverMenu();
+                }
             }, HOVER_CLOSE_DELAY);
         });
     }

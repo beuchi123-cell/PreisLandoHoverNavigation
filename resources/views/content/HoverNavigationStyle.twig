@@ -631,7 +631,7 @@ body.preis-lando-mobile-menu-open {
 
 
 /* =========================================================
-   v1.4.8 – Desktop ohne Layoutsprung + mobiler Drawer ohne Abdunklung
+   v1.4.10 – Desktop ohne Layoutsprung + mobiler Drawer ohne Abdunklung
    ========================================================= */
 @media (min-width: 768px) {
     html {
@@ -666,4 +666,44 @@ body.preis-lando-mobile-menu-open {
         background: #f3f3f3 !important;
     }
 }
+
+/* =========================================================
+   v1.4.10 – Hover-Brücke + mobiler Drawer exakt unter Header
+   ========================================================= */
+@media (min-width: 768px) {
+    .preis-lando-nav-category.preis-lando-hover-under-active {
+        pointer-events: auto !important;
+    }
+
+    .preis-lando-nav-category.preis-lando-hover-under-active > .preis-lando-nav-link {
+        pointer-events: none !important;
+        color: transparent !important;
+        background: #eeeeee !important;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .preis-lando-mobile-drawer {
+        position: fixed !important;
+        top: var(--pl-mobile-drawer-top, 100px) !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: auto !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    .preis-lando-mobile-drawer-panel {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: 100% !important;
+        background: #f3f3f3 !important;
+        transform: none !important;
+    }
+}
+
 </style>

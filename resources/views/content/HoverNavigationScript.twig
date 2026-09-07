@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.10";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.12");
-    console.info("[PreisLandoHoverNavigation] v1.4.10 geladen");
+    window.PreisLandoHoverVersion = "1.4.13";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.13");
+    console.info("[PreisLandoHoverNavigation] v1.4.13 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -851,9 +851,6 @@
 
         return button;
     }
-
-    window.addEventListener("preislando:mobile-menu-toggle", toggleMobileDrawer);
-    window.addEventListener("preislando:mobile-menu-close", closeMobileDrawer);
 
     /* =====================================================
        INITIALISIERUNG

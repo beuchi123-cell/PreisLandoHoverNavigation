@@ -19,7 +19,7 @@
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
     window.PreisLandoHoverVersion = "1.4.10";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.10");
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.11");
     console.info("[PreisLandoHoverNavigation] v1.4.10 geladen");
 
     let hoverOpenTimer = null;
@@ -570,7 +570,38 @@
         menu.classList.add("is-visible");
     }
 
+    /* =====================================================
+       v1.4.11 – Desktop-Hover als gemeinsamer Bereich
+
+       Wichtig: Das Menü wird NICHT mehr beim Verlassen eines einzelnen
+       Kategorien-LI geschlossen. Solange sich die Maus irgendwo im
+       gemeinsamen Navigations-Grid (inkl. grauer Verbindungszelle und
+       Mega-Menü) befindet, bleibt die aktive Hauptkategorie offen.
+       Dadurch funktioniert der Weg z.B.
+       Gedeckter Tisch -> Sale -> Mega-Menü ohne Overlay/Mousemove-Tricks.
+       ===================================================== */
+    function ensureHoverBoundary(topList) {
+        if (!topList || topList.dataset.preisLandoHoverBoundary === "1") return;
+        topList.dataset.preisLandoHoverBoundary = "1";
+
+        topList.addEventListener("mouseenter", function () {
+            if (!isHoverMode()) return;
+            cancelHoverClose();
+        });
+
+        topList.addEventListener("mouseleave", function () {
+            if (!isHoverMode()) return;
+
+            cancelHoverOpen();
+            cancelHoverClose();
+            hoverCloseTimer = setTimeout(function () {
+                closeActiveHoverMenu();
+            }, HOVER_CLOSE_DELAY);
+        });
+    }
+
     function prepareCategoryBox(topList, box, category) {
+        ensureHoverBoundary(topList);
         if (box.dataset.preisLandoHoverReady === "1") return;
         box.dataset.preisLandoHoverReady = "1";
 
@@ -611,7 +642,7 @@
         box.addEventListener("mouseenter", function () {
             if (!isHoverMode()) return;
 
-            /* v1.4.10: Die graue Zelle unter der aktiven Hauptkategorie
+            /* v1.4.11: Die graue Zelle unter der aktiven Hauptkategorie
                ist nur eine Brücke zum Mega-Menü. Sie darf niemals ihr
                eigenes Hover-Menü öffnen. */
             if (box.classList.contains("preis-lando-hover-under-active")) {
@@ -628,38 +659,13 @@
             }, HOVER_OPEN_DELAY);
         });
 
-        box.addEventListener("mouseleave", function (event) {
+        box.addEventListener("mouseleave", function () {
             if (!isHoverMode()) return;
+
+            /* v1.4.11: Hier nur einen noch nicht ausgeführten OPEN-Timer
+               abbrechen. Das Schließen übernimmt ausschließlich der
+               gemeinsame topList-Hoverbereich. */
             cancelHoverOpen();
-
-            const menu = getSharedMenu(topList);
-            const related = event.relatedTarget;
-
-            /* Vom aktiven Hauptpunkt in seine graue Brückenzelle:
-               Hover bleibt offen. */
-            if (related && related.closest &&
-                related.closest(".preis-lando-hover-under-active")) {
-                cancelHoverClose();
-                return;
-            }
-
-            /* Von der grauen Brückenzelle ins Mega-Menü:
-               ebenfalls offen lassen. */
-            if (box.classList.contains("preis-lando-hover-under-active")) {
-                if (menu && related && menu.contains(related)) {
-                    cancelHoverClose();
-                    return;
-                }
-            }
-
-            if (menu && related && menu.contains(related)) return;
-
-            cancelHoverClose();
-            hoverCloseTimer = setTimeout(function () {
-                if (activeHoverBox === box || box.classList.contains("preis-lando-hover-under-active")) {
-                    closeActiveHoverMenu();
-                }
-            }, HOVER_CLOSE_DELAY);
         });
     }
 

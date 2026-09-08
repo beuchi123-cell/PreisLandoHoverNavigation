@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.14";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.14");
-    console.info("[PreisLandoHoverNavigation] v1.4.14 geladen");
+    window.PreisLandoHoverVersion = "1.4.15";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.15");
+    console.info("[PreisLandoHoverNavigation] v1.4.15 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -730,6 +730,30 @@
         if (!dialog) return;
 
         dialog.setAttribute("aria-hidden", "false");
+
+        /* v1.4.15: exakt die mobil live getestete Drawer-Geometrie.
+           Drawer beginnt direkt unter der sichtbaren Suche. */
+        const searchBox =
+            document.querySelector(".always-visible-search .position-relative") ||
+            document.querySelector(".always-visible-search");
+        const panel = dialog.querySelector(".preis-lando-mobile-drawer-panel");
+        const bottom = searchBox
+            ? Math.max(0, Math.round(searchBox.getBoundingClientRect().bottom))
+            : 100;
+
+        dialog.style.setProperty("position", "fixed", "important");
+        dialog.style.setProperty("inset", "auto 0 0 0", "important");
+        dialog.style.setProperty("top", bottom + "px", "important");
+        dialog.style.setProperty("bottom", "0", "important");
+        dialog.style.setProperty("height", "calc(100dvh - " + bottom + "px)", "important");
+        dialog.style.setProperty("padding-top", "0", "important");
+
+        if (panel) {
+            panel.style.setProperty("position", "absolute", "important");
+            panel.style.setProperty("inset", "0", "important");
+            panel.style.setProperty("height", "100%", "important");
+        }
+
         requestAnimationFrame(function () {
             dialog.classList.add("is-open");
         });

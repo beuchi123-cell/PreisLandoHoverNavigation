@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.15";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.15");
-    console.info("[PreisLandoHoverNavigation] v1.4.15 geladen");
+    window.PreisLandoHoverVersion = "1.4.16";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.16");
+    console.info("[PreisLandoHoverNavigation] v1.4.16 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -373,6 +373,8 @@
         });
 
         document.querySelectorAll(".preis-lando-navigation-root").forEach(function (root) {
+            /* v1.4.16: auch die graue Unterzeilen-Brücke vollständig zurücksetzen. */
+            setActiveCategory(root, null);
             root.classList.remove("preis-lando-hover-open");
         });
 
@@ -380,14 +382,21 @@
     }
 
     function closeActiveHoverMenu() {
-        if (!activeHoverBox) return;
+        if (!activeHoverBox) {
+            closeAllHoverMenus();
+            return;
+        }
 
         const topList = activeHoverBox.closest(".preis-lando-navigation-root");
         const menu = getSharedMenu(topList);
         if (menu) menu.classList.remove("is-visible", "is-loading");
 
         activeHoverBox.classList.remove("is-hover-active");
-        if (topList) topList.classList.remove("preis-lando-hover-open");
+        if (topList) {
+            /* v1.4.16: graue Unterzeilen-Brücke + aria/tabindex sauber zurücksetzen. */
+            setActiveCategory(topList, null);
+            topList.classList.remove("preis-lando-hover-open");
+        }
         activeHoverBox = null;
     }
 

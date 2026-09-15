@@ -1,5 +1,11 @@
 <style>
 /* =========================================================
+   PREISLANDO – ZENTRALES PLUGIN-CSS
+   Plugin 1.4.17.0 ALLCSS
+   ShopBuilder-Custom-CSS kann nach erfolgreichem Test geleert werden.
+   ========================================================= */
+
+/* =========================================================
    PREISLANDO GRID-NAVIGATION + GEMEINSAMES HOVER-FELD
    Version 1.4.12
 
@@ -708,15 +714,2392 @@ body.preis-lando-mobile-menu-open {
     }
 }
 
+/* =========================================================
+   EHEMALIGES SHOPBUILDER-CUSTOM-CSS (v1.4.20 SAFE)
+   jetzt zentral im Plugin
+   ========================================================= */
+
+.pl-autumn{--cream:#fffaf3;--ink:#3d2a20;--rust:#a84e22;--gold:#d99235;font-family:Arial,Helvetica,sans-serif;color:var(--ink);background:var(--cream);line-height:1.6}.pl-autumn *{box-sizing:border-box}.pl-wrap{max-width:1180px;margin:auto;padding:0 24px}.pl-hero{min-height:520px;display:flex;align-items:flex-end;background:linear-gradient(90deg,rgba(36,20,13,.76),rgba(36,20,13,.18)),url('https://cdn02.plentyone.com/txddaqsiwduy/frontend/startseiten-banner.png') center/cover no-repeat;color:#fff}.pl-hero .pl-wrap{width:100%;padding-top:90px;padding-bottom:70px}.pl-kicker{text-transform:uppercase;letter-spacing:.16em;font-weight:700;font-size:.78rem}.pl-hero h1,.pl-section h2,.pl-end h2{font-family:Georgia,serif;line-height:1.05}.pl-hero h1{font-size:clamp(2.6rem,6vw,5.6rem);max-width:780px;margin:.18em 0}.pl-hero p{font-size:1.18rem;max-width:650px}.pl-btn{display:inline-block;background:var(--rust);color:#fff!important;text-decoration:none;padding:13px 22px;border-radius:999px;font-weight:700;margin-top:12px}.pl-section{padding:72px 0}.pl-section h2{font-size:clamp(2rem,4vw,3.3rem);margin:0 0 18px}.pl-lead{font-size:1.12rem;max-width:800px}.pl-grid2{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin-top:32px}.pl-tip{background:#fff;border:1px solid #eadfce;border-radius:18px;padding:28px}.pl-tip h3{margin-top:0}.pl-band{background:#f2e5d4}.pl-products{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:28px}.pl-card{background:#fff;border-radius:16px;overflow:hidden;border:1px solid #eadfce;text-decoration:none;color:var(--ink);transition:.2s}.pl-card:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(58,35,22,.12)}.pl-card img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block}.pl-card span{display:block;padding:15px 16px;font-weight:700}.pl-checks{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:28px}.pl-check{padding:24px;border-left:4px solid var(--gold);background:#fff}.pl-cat{display:flex;justify-content:space-between;gap:20px;align-items:center;background:#4f5848;color:#fff;border-radius:22px;padding:34px}.pl-cat a{color:#fff;font-weight:700}.pl-end{text-align:center;padding:78px 24px;background:#38261d;color:#fff}.pl-end h2{font-size:clamp(2rem,4vw,3.5rem);margin:.2em 0}@media(max-width:900px){.pl-products{grid-template-columns:repeat(2,1fr)}.pl-checks{grid-template-columns:1fr}.pl-hero{min-height:450px}}@media(max-width:620px){.pl-grid2,.pl-products{grid-template-columns:1fr}.pl-section{padding:50px 0}.pl-cat{align-items:flex-start;flex-direction:column}.pl-wrap{padding:0 18px}}
 
 
 /* =========================================================
-   PREISLANDO F12 FIX 2026-09-15
-   Plugin-Version 1.4.16.2
-   Exakt auf die live per F12 ermittelten ShopBuilder-Strukturen.
+   PREISLANDO
+   HEADER / NAVIGATION / SUCHE
+   CUSTOM CSS v1.4.17
+
+   ShopBuilder-Klassen:
+   Top Bar              = preis-lando-topbar
+   Bilderbox / Logo     = preis-lando-logo
+   Kategorienavigation  = preis-lando-navigation
+
+   Das Desktop-Hover-Menü selbst wird weiterhin durch
+   HoverNavigationStyle.twig aus dem Plugin gestaltet.
    ========================================================= */
 
-/* 1) Desktop-Header: transparente/graue ShopBuilder-Zeile weiß */
+
+/* =========================================================
+   1. GRUNDLAGE / WEISSER HEADER
+   ========================================================= */
+
+.header-container,
+#page-header-parent,
+.preis-lando-topbar,
+.preis-lando-logo,
+.preis-lando-navigation,
+.widget-image-box {
+    background: #fff !important;
+    background-color: #fff !important;
+}
+
+.preis-lando-topbar,
+.preis-lando-logo,
+.preis-lando-navigation {
+    box-sizing: border-box !important;
+}
+
+
+/* =========================================================
+   2. LOGO
+   ========================================================= */
+
+.preis-lando-logo .widget-caption:empty,
+.preis-lando-logo .widget-image-box > a > .widget-inner {
+    display: none !important;
+}
+
+.preis-lando-logo,
+.preis-lando-logo .widget-image-box {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.preis-lando-logo .widget-image-box picture,
+.preis-lando-logo .widget-image-box img {
+    display: block !important;
+    max-width: 100% !important;
+    object-fit: contain !important;
+}
+
+
+/* =========================================================
+   3. NAVIGATION
+   ========================================================= */
+
+.preis-lando-navigation {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    overflow: visible !important;
+}
+
+@media (min-width: 768px) {
+    .kategorie-mobile-button {
+        display: none !important;
+        visibility: hidden !important;
+    }
+}
+
+
+/* =========================================================
+   4. DESKTOP-BREITE
+   ========================================================= */
+
+@media (min-width: 1200px) {
+
+    #page-header-parent,
+    #page-body {
+        width: calc(100% - 60px) !important;
+        max-width: 1400px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+
+    .preis-lando-topbar,
+    .preis-lando-logo,
+    .preis-lando-navigation {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+}
+
+
+/* =========================================================
+   5. MOBILE HEADER
+   [ Kategorien ][ Logo ][ Icons ]
+   [           Suche           ]
+   ========================================================= */
+
+@media (max-width: 767.98px) {
+
+    /*
+     * JS setzt .preis-lando-mobile-header an die Top Bar.
+     * .top-bar-items ist bei plentyShop LTS normalerweise der
+     * innere Träger. Falls er fehlt, greifen die Fallback-Regeln.
+     */
+    .preis-lando-topbar.preis-lando-mobile-header,
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        width: 100% !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        align-items: center !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+
+    /* Kategorienbutton */
+    .preis-lando-topbar .kategorie-mobile-button {
+        display: flex !important;
+        visibility: visible !important;
+
+        order: 1 !important;
+        flex: 0 0 18% !important;
+        width: 18% !important;
+        max-width: 18% !important;
+        height: 54px !important;
+
+        margin: 0 !important;
+        padding: 2px !important;
+
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+
+        border: none !important;
+        background: transparent !important;
+        box-sizing: border-box !important;
+        cursor: pointer !important;
+        color: #333 !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button span {
+        display: none !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button::before {
+        content: "☰";
+        display: block !important;
+        font-size: 25px !important;
+        line-height: 26px !important;
+        color: #333 !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button::after {
+        content: "Kategorien";
+        display: block !important;
+        margin-top: 2px !important;
+        font-size: 10px !important;
+        line-height: 12px !important;
+        color: #333 !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button.is-open::before {
+        content: "×";
+        font-size: 30px !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button.is-open::after {
+        content: "Schließen";
+    }
+
+
+    /* Logo wird auf Mobile per JS in die Top Bar gesetzt */
+    .preis-lando-topbar .preis-lando-logo {
+        order: 2 !important;
+        flex: 0 0 22% !important;
+        width: 22% !important;
+        max-width: 22% !important;
+
+        margin: 0 !important;
+        padding: 3px 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo .widget-image-box {
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        text-align: left !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        display: block !important;
+        width: auto !important;
+        height: 38px !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        object-fit: contain !important;
+    }
+
+
+    /* Login / Registrieren / Warenkorb */
+    .preis-lando-topbar .controls {
+        order: 3 !important;
+        flex: 1 1 0 !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+        padding: 0 3px 0 0 !important;
+
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+
+        box-sizing: border-box !important;
+        white-space: nowrap !important;
+    }
+
+    .preis-lando-topbar .controls .controls-list {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        white-space: nowrap !important;
+    }
+
+    .preis-lando-topbar .controls .list-inline-item {
+        display: flex !important;
+        flex: 0 0 auto !important;
+        margin: 0 1px !important;
+        padding: 0 !important;
+        align-items: center !important;
+        white-space: nowrap !important;
+    }
+
+    .preis-lando-topbar .controls .control-user,
+    .preis-lando-topbar .controls .control-user > .position-relative,
+    .preis-lando-topbar .controls .control-user > .position-relative > div {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        white-space: nowrap !important;
+    }
+
+    .preis-lando-topbar .controls .control-user .nav-link span {
+        display: none !important;
+    }
+
+    .preis-lando-topbar .controls .control-user .nav-link {
+        display: flex !important;
+        flex: 0 0 27px !important;
+        width: 27px !important;
+        min-width: 27px !important;
+        margin: 0 !important;
+        padding: 7px 2px !important;
+        align-items: center !important;
+        justify-content: center !important;
+        white-space: nowrap !important;
+    }
+
+    .preis-lando-topbar .controls,
+    .preis-lando-topbar .controls a,
+    .preis-lando-topbar .controls i,
+    .preis-lando-topbar .controls .fa,
+    .preis-lando-topbar .controls [class*="fa-"] {
+        color: #333 !important;
+    }
+
+
+    /* Suche auf komplette zweite Zeile */
+    .preis-lando-topbar .always-visible-search {
+        order: 10 !important;
+        flex: 0 0 100% !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 3px 10px 5px 10px !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar .always-visible-search,
+    .preis-lando-topbar .always-visible-search .container-max {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+
+    /* Standardnavigation auf Mobile erst öffnen, wenn Button geklickt */
+    .preis-lando-navigation {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 10px !important;
+        box-sizing: border-box !important;
+        background: #fff !important;
+    }
+
+    /* Mobil bleibt bewusst das alte Mini-Menü:
+       Kategorienbutton -> Plenty-Standardnavigation mit Root-Kategorie.
+       Das Plugin blendet das neue 1-10 Raster unter 768px aus. */
+}
+
+
+
+/* Mobile Suche wirklich als volle zweite Zeile anzeigen. */
+@media (max-width: 767.98px) {
+    .preis-lando-topbar .always-visible-search,
+    .preis-lando-topbar .always-visible-search .container-max,
+    .preis-lando-topbar .always-visible-search form,
+    .preis-lando-topbar .always-visible-search .input-group,
+    .preis-lando-topbar .always-visible-search .search-input,
+    .preis-lando-topbar .always-visible-search .search-input-container {
+        display: flex !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: 1 1 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar .always-visible-search input[type="search"],
+    .preis-lando-topbar .always-visible-search input[type="text"],
+    .preis-lando-topbar .always-visible-search input.form-control {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    .preis-lando-topbar .always-visible-search button,
+    .preis-lando-topbar .always-visible-search .btn {
+        flex: 0 0 54px !important;
+        width: 54px !important;
+        max-width: 54px !important;
+    }
+}
+
+
+/* =========================================================
+   6. SCHNELLSUCHE
+   EIGENER SCROLLBEREICH
+   ========================================================= */
+
+.autocomplete-suggestions {
+    max-height: 520px !important;
+
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+
+    overscroll-behavior: contain !important;
+
+    background: #fff !important;
+
+    box-sizing: border-box !important;
+
+    scrollbar-width: thin;
+}
+
+
+/* =========================================================
+   10. SCHNELLSUCHE
+   EIN ARTIKELTREFFER
+   ========================================================= */
+
+.autocomplete-suggestions
+a.autocomplete-suggestion {
+    position: relative !important;
+
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+
+    width: 100% !important;
+
+    height: 76px !important;
+    min-height: 76px !important;
+
+    margin: 0 !important;
+
+    padding:
+        7px
+        90px
+        7px
+        12px !important;
+
+    border-bottom: 1px solid #ddd !important;
+
+    background: #fff !important;
+
+    text-decoration: none !important;
+
+    box-sizing: border-box !important;
+}
+
+
+.autocomplete-suggestions
+a.autocomplete-suggestion:hover {
+    background: #f5f5f5 !important;
+}
+
+
+/* =========================================================
+   11. SCHNELLSUCHE
+   BILD
+   ========================================================= */
+
+.autocomplete-suggestions
+a.autocomplete-suggestion > .image {
+    display: flex !important;
+
+    flex: 0 0 62px !important;
+
+    width: 62px !important;
+    height: 62px !important;
+
+    margin: 0 14px 0 0 !important;
+    padding: 0 !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+
+.autocomplete-suggestions
+a.autocomplete-suggestion >
+.image picture {
+    display: flex !important;
+
+    width: 62px !important;
+    height: 62px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+
+.autocomplete-suggestions
+a.autocomplete-suggestion >
+.image img {
+    display: block !important;
+
+    width: 62px !important;
+    height: 62px !important;
+
+    max-width: 62px !important;
+    max-height: 62px !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    object-fit: contain !important;
+}
+
+
+/* =========================================================
+   12. SCHNELLSUCHE
+   ARTIKELNAME
+   ========================================================= */
+
+.autocomplete-suggestions
+a.autocomplete-suggestion > .label {
+    display: flex !important;
+
+    flex: 1 1 auto !important;
+
+    min-width: 0 !important;
+    height: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    align-items: center !important;
+}
+
+
+.autocomplete-suggestions
+a.autocomplete-suggestion >
+.label p {
+    display: block !important;
+
+    width: 100% !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+
+    font-size: 14px !important;
+    line-height: 18px !important;
+
+    white-space: nowrap !important;
+
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+
+/* =========================================================
+   13. SCHNELLSUCHE
+   PREIS RECHTS
+   ========================================================= */
+
+.autocomplete-suggestions
+.preis-lando-search-price {
+    position: absolute !important;
+
+    right: 12px !important;
+    top: 50% !important;
+
+    transform:
+        translateY(-50%) !important;
+
+    font-size: 14px !important;
+    line-height: 18px !important;
+
+    font-weight: 600 !important;
+
+    white-space: nowrap !important;
+
+    color: #333 !important;
+}
+
+
+/* =========================================================
+   14. ÜBERSCHRIFT "ARTIKEL"
+   ========================================================= */
+
+.autocomplete-suggestions
+.widget-search-suggestion-item >
+.border-bottom {
+    padding-top: 12px !important;
+    padding-bottom: 8px !important;
+}
+
+
+.autocomplete-suggestions
+.widget-search-suggestion-item h4 {
+    margin: 0 !important;
+
+    font-size: 18px !important;
+}
+
+
+/* =========================================================
+   15. SCHNELLSUCHE MOBIL
+   ========================================================= */
+
+@media (max-width: 767px) {
+
+    .autocomplete-suggestions {
+        max-height: 65vh !important;
+    }
+
+
+    .autocomplete-suggestions
+    a.autocomplete-suggestion {
+        height: 68px !important;
+        min-height: 68px !important;
+
+        padding:
+            5px
+            82px
+            5px
+            8px !important;
+    }
+
+
+    .autocomplete-suggestions
+    a.autocomplete-suggestion >
+    .image {
+        flex-basis: 55px !important;
+
+        width: 55px !important;
+        height: 55px !important;
+
+        margin-right: 10px !important;
+    }
+
+
+    .autocomplete-suggestions
+    a.autocomplete-suggestion >
+    .image picture,
+
+    .autocomplete-suggestions
+    a.autocomplete-suggestion >
+    .image img {
+        width: 55px !important;
+        height: 55px !important;
+
+        max-width: 55px !important;
+        max-height: 55px !important;
+    }
+
+
+    .autocomplete-suggestions
+    a.autocomplete-suggestion >
+    .label p {
+        font-size: 13px !important;
+    }
+
+
+    .autocomplete-suggestions
+    .preis-lando-search-price {
+        right: 8px !important;
+
+        font-size: 12px !important;
+    }
+}
+/* =========================================================
+   11. MOBILE HEADER v1.4.8 – OTTO-ARTIGE ANORDNUNG
+   [ Menü ][ Logo ][ Icons ]
+   [        Suche         ]
+   ========================================================= */
+@media (max-width: 767.98px) {
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        display: grid !important;
+        grid-template-columns: 54px minmax(90px, 130px) minmax(0, 1fr) !important;
+        grid-template-areas:
+            "menu logo controls"
+            "search search search" !important;
+        align-items: center !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 4px 8px 6px 8px !important;
+        box-sizing: border-box !important;
+        background: #fff !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button {
+        grid-area: menu !important;
+        order: initial !important;
+        width: 54px !important;
+        max-width: 54px !important;
+        height: 54px !important;
+        flex: none !important;
+        margin: 0 !important;
+        padding: 2px 0 !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo {
+        grid-area: logo !important;
+        order: initial !important;
+        width: 100% !important;
+        max-width: 130px !important;
+        flex: none !important;
+        margin: 0 !important;
+        padding: 3px 6px !important;
+        justify-self: start !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        width: auto !important;
+        max-width: 100% !important;
+        height: 36px !important;
+        margin: 0 !important;
+    }
+
+    .preis-lando-topbar .controls {
+        grid-area: controls !important;
+        order: initial !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        flex: none !important;
+        justify-self: stretch !important;
+        justify-content: flex-end !important;
+    }
+
+    .preis-lando-topbar .always-visible-search {
+        grid-area: search !important;
+        order: initial !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: none !important;
+        margin: 4px 0 0 0 !important;
+        padding: 0 !important;
+    }
+
+    /* Die alte ShopBuilder-Kategorienzeile hat mobil nichts mehr zu tun.
+       Das Menü kommt aus dem seitlichen Drawer des Plugins. */
+    .preis-lando-navigation {
+        display: none !important;
+    }
+}
+
+
+/* v1.4.8: Mobiler Menübutton muss immer sichtbar und klickbar sein. */
+@media (max-width: 767.98px) {
+    .preis-lando-topbar .kategorie-mobile-button {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        position: relative !important;
+        z-index: 20 !important;
+    }
+}
+
+/* =========================================================
+   v1.4.8 MOBILE-KOPF: alles in EINER Zeile wie bei OTTO
+   [Menü][Logo][Icons................]
+   [Suche............................]
+   ========================================================= */
+@media (max-width: 767.98px) {
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        display: grid !important;
+        grid-template-columns: 64px 92px minmax(0, 1fr) !important;
+        grid-template-rows: 58px auto !important;
+        align-items: center !important;
+        width: 100% !important;
+        gap: 0 !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        width: 64px !important;
+        max-width: 64px !important;
+        height: 58px !important;
+        flex: none !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        width: 92px !important;
+        max-width: 92px !important;
+        padding: 4px 0 !important;
+        flex: none !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        height: 42px !important;
+        max-width: 90px !important;
+    }
+
+    .preis-lando-topbar .controls {
+        grid-column: 3 !important;
+        grid-row: 1 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        justify-self: stretch !important;
+        justify-content: flex-end !important;
+        overflow: hidden !important;
+    }
+
+    .preis-lando-topbar .controls .controls-list {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        gap: 2px !important;
+        width: 100% !important;
+    }
+
+    .preis-lando-topbar .always-visible-search {
+        grid-column: 1 / -1 !important;
+        grid-row: 2 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 4px 10px 8px 10px !important;
+        margin: 0 !important;
+    }
+
+    /* Falls Plenty parallel sein eigenes mobiles Kategorienfeld öffnet,
+       bleibt es unsichtbar. Es gibt nur den PreisLando-Drawer. */
+    body.preis-lando-mobile-menu-open .mobile-navigation,
+    body.preis-lando-mobile-menu-open .navbar-collapse,
+    body.preis-lando-mobile-menu-open .nav-dropdown,
+    body.preis-lando-mobile-menu-open .category-navigation,
+    body.preis-lando-mobile-menu-open .widget-navigation-tree {
+        display: none !important;
+    }
+}
+
+/* =========================================================
+   v1.4.8 MOBILE HEADER – FESTES GRID
+   [ Menü ][ Logo ][ freie/Controls-Fläche ]
+   [              Suche                 ]
+   Nichts darf hinter Logo oder Menü rutschen.
+   ========================================================= */
+@media (max-width: 767.98px) {
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        display: grid !important;
+        grid-template-columns: 54px 84px minmax(0, 1fr) !important;
+        grid-template-rows: 58px auto !important;
+        grid-template-areas:
+            "menu logo controls"
+            "search search search" !important;
+        align-items: center !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        gap: 0 !important;
+        padding: 4px 8px 6px 8px !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button {
+        grid-area: menu !important;
+        width: 54px !important;
+        min-width: 54px !important;
+        max-width: 54px !important;
+        height: 58px !important;
+        margin: 0 !important;
+        padding: 2px 0 !important;
+        z-index: 3 !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo {
+        grid-area: logo !important;
+        width: 84px !important;
+        min-width: 84px !important;
+        max-width: 84px !important;
+        margin: 0 !important;
+        padding: 3px 2px !important;
+        overflow: hidden !important;
+        z-index: 2 !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        display: block !important;
+        width: auto !important;
+        height: 40px !important;
+        max-width: 80px !important;
+        object-fit: contain !important;
+        margin: 0 !important;
+    }
+
+    .preis-lando-topbar .controls {
+        grid-area: controls !important;
+        position: relative !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        overflow: visible !important;
+        box-sizing: border-box !important;
+        z-index: 2 !important;
+    }
+
+    .preis-lando-topbar .controls .controls-list {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-end !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .preis-lando-topbar .controls .list-inline-item {
+        flex: 0 1 auto !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 1px !important;
+    }
+
+    .preis-lando-topbar .controls .nav-link,
+    .preis-lando-topbar .controls a {
+        min-width: 28px !important;
+        padding-left: 3px !important;
+        padding-right: 3px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Text kompakt halten, Icons aber sichtbar lassen. */
+    .preis-lando-topbar .controls span,
+    .preis-lando-topbar .controls .text-appearance {
+        font-size: 11px !important;
+        white-space: nowrap !important;
+    }
+
+    .preis-lando-topbar .always-visible-search {
+        grid-area: search !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 6px 8px 8px 8px !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Das PreisLando-Seitenmenü liegt über der Seite und verschiebt nichts. */
+    .preis-lando-mobile-drawer {
+        z-index: 2147483000 !important;
+    }
+}
+
+/* Sehr schmale Geräte: Logo etwas kompakter, Controls behalten Vorrang. */
+@media (max-width: 420px) {
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        grid-template-columns: 50px 72px minmax(0, 1fr) !important;
+        padding-left: 5px !important;
+        padding-right: 5px !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button {
+        width: 50px !important;
+        min-width: 50px !important;
+        max-width: 50px !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo {
+        width: 72px !important;
+        min-width: 72px !important;
+        max-width: 72px !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        height: 36px !important;
+        max-width: 68px !important;
+    }
+
+    .preis-lando-topbar .controls .nav-link,
+    .preis-lando-topbar .controls a {
+        min-width: 25px !important;
+        padding-left: 2px !important;
+        padding-right: 2px !important;
+    }
+}
+
+
+/* v1.4.8 MOBILE – höherer Kopf, volle Suche, feste Bereiche */
+@media (max-width: 767.98px) {
+    :root { --pl-mobile-header-height: 138px; }
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        grid-template-columns: 62px 92px minmax(0, 1fr) !important;
+        grid-template-rows: 70px 60px !important;
+        grid-template-areas: "menu logo controls" "search search search" !important;
+        min-height: 138px !important; padding: 4px 10px !important; gap: 0 !important;
+    }
+    .preis-lando-topbar .kategorie-mobile-button { width:62px !important; min-width:62px !important; max-width:62px !important; height:70px !important; }
+    .preis-lando-topbar .kategorie-mobile-button.is-open::before { content:"×" !important; font-size:31px !important; line-height:30px !important; }
+    .preis-lando-topbar .kategorie-mobile-button.is-open::after { content:"Schließen" !important; }
+    .preis-lando-topbar .preis-lando-logo { width:92px !important; min-width:92px !important; max-width:92px !important; overflow:visible !important; }
+    .preis-lando-topbar .preis-lando-logo picture, .preis-lando-topbar .preis-lando-logo img { height:44px !important; max-width:88px !important; }
+    .preis-lando-topbar .controls { position:static !important; min-width:0 !important; overflow:visible !important; justify-content:flex-end !important; }
+    .preis-lando-topbar .controls .controls-list { width:auto !important; max-width:100% !important; flex:0 1 auto !important; justify-content:flex-end !important; gap:2px !important; }
+    .preis-lando-topbar .controls .list-inline-item { flex:0 0 auto !important; }
+    .preis-lando-topbar .always-visible-search { width:100% !important; max-width:none !important; min-width:0 !important; margin:0 !important; padding:6px 0 !important; justify-self:stretch !important; box-sizing:border-box !important; }
+    .preis-lando-topbar .always-visible-search > *, .preis-lando-topbar .always-visible-search form, .preis-lando-topbar .always-visible-search .input-group { width:100% !important; max-width:none !important; box-sizing:border-box !important; }
+    body.preis-lando-mobile-menu-open .preis-lando-topbar { position:relative !important; z-index:2147483001 !important; background:#fff !important; }
+}
+@media (max-width:420px) {
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items, .preis-lando-topbar.preis-lando-mobile-header > .widget-inner { grid-template-columns:56px 80px minmax(0,1fr) !important; }
+    .preis-lando-topbar .kategorie-mobile-button { width:56px !important; min-width:56px !important; max-width:56px !important; }
+    .preis-lando-topbar .preis-lando-logo { width:80px !important; min-width:80px !important; max-width:80px !important; }
+    .preis-lando-topbar .preis-lando-logo picture, .preis-lando-topbar .preis-lando-logo img { max-width:76px !important; }
+    .preis-lando-topbar .controls .nav-link, .preis-lando-topbar .controls a { min-width:24px !important; padding-left:1px !important; padding-right:1px !important; }
+}
+
+
+/* =========================================================
+   v1.4.8 MOBILE – kompakter wie OTTO + Suche volle Viewportbreite
+   ========================================================= */
+@media (max-width: 767.98px) {
+    :root { --pl-mobile-header-height: 114px; }
+
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        grid-template-columns: 58px 86px minmax(0, 1fr) !important;
+        grid-template-rows: 58px 52px !important;
+        grid-template-areas: "menu logo controls" "search search search" !important;
+        min-height: 114px !important;
+        padding: 2px 8px !important;
+        gap: 0 !important;
+        overflow: visible !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button {
+        width: 58px !important;
+        min-width: 58px !important;
+        max-width: 58px !important;
+        height: 58px !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo {
+        width: 86px !important;
+        min-width: 86px !important;
+        max-width: 86px !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        height: 40px !important;
+        max-width: 82px !important;
+    }
+
+    .preis-lando-topbar .controls {
+        min-height: 58px !important;
+        align-items: center !important;
+    }
+
+    /* Full-bleed-Suche: unabhängig davon, wie breit der ShopBuilder-Container ist. */
+    .preis-lando-topbar .always-visible-search {
+        grid-area: search !important;
+        position: relative !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
+        width: calc(100vw - 20px) !important;
+        max-width: calc(100vw - 20px) !important;
+        min-width: calc(100vw - 20px) !important;
+        margin: 0 !important;
+        padding: 2px 0 4px 0 !important;
+        box-sizing: border-box !important;
+        justify-self: center !important;
+    }
+
+    .preis-lando-topbar .always-visible-search > *,
+    .preis-lando-topbar .always-visible-search form,
+    .preis-lando-topbar .always-visible-search .input-group,
+    .preis-lando-topbar .always-visible-search .search-input-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Geöffnetes Kategorienmenü startet unter der Suche; keine dunkle Overlay-Fläche. */
+    .preis-lando-mobile-drawer {
+        background: transparent !important;
+    }
+}
+
+@media (max-width: 420px) {
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        grid-template-columns: 54px 78px minmax(0, 1fr) !important;
+    }
+    .preis-lando-topbar .kategorie-mobile-button {
+        width: 54px !important;
+        min-width: 54px !important;
+        max-width: 54px !important;
+    }
+    .preis-lando-topbar .preis-lando-logo {
+        width: 78px !important;
+        min-width: 78px !important;
+        max-width: 78px !important;
+    }
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        max-width: 74px !important;
+    }
+}
+
+
+/* =========================================================
+   v1.4.10 FINAL MOBILE OVERRIDE
+   [Menü][Logo][Icons]
+   [Suche über komplette Breite]
+   ========================================================= */
+@media (max-width: 767.98px) {
+    .preis-lando-topbar.preis-lando-mobile-header {
+        margin: 0 !important;
+        padding: 0 !important;
+        min-height: 0 !important;
+        background: #fff !important;
+    }
+
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        display: grid !important;
+        grid-template-columns: 56px 84px minmax(0, 1fr) !important;
+        grid-template-rows: 48px 46px !important;
+        grid-template-areas: "menu logo controls" "search search search" !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-height: 94px !important;
+        margin: 0 !important;
+        padding: 0 8px 4px 8px !important;
+        gap: 0 !important;
+        align-items: center !important;
+        box-sizing: border-box !important;
+        overflow: visible !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button {
+        grid-area: menu !important;
+        width: 56px !important; min-width: 56px !important; max-width: 56px !important;
+        height: 48px !important; margin: 0 !important; padding: 0 !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo {
+        grid-area: logo !important;
+        width: 84px !important; min-width: 84px !important; max-width: 84px !important;
+        height: 48px !important; margin: 0 !important; padding: 2px !important;
+    }
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        height: 38px !important; max-height: 38px !important; max-width: 80px !important;
+    }
+
+    .preis-lando-topbar .controls {
+        grid-area: controls !important;
+        min-height: 48px !important;
+        width: 100% !important; max-width: none !important; min-width: 0 !important;
+        margin: 0 !important; padding: 0 !important; overflow: visible !important;
+        justify-content: flex-end !important; align-items: center !important;
+    }
+
+    .preis-lando-topbar .preis-lando-mobile-search,
+    .preis-lando-topbar .always-visible-search {
+        grid-area: search !important;
+        position: static !important;
+        left: auto !important; transform: none !important;
+        display: block !important;
+        width: 100% !important; max-width: none !important; min-width: 0 !important;
+        margin: 0 !important; padding: 0 !important;
+        align-self: stretch !important; justify-self: stretch !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar .preis-lando-mobile-search > *,
+    .preis-lando-topbar .preis-lando-mobile-search .container-max,
+    .preis-lando-topbar .preis-lando-mobile-search form,
+    .preis-lando-topbar .preis-lando-mobile-search .input-group,
+    .preis-lando-topbar .preis-lando-mobile-search .search-input-container {
+        width: 100% !important; max-width: none !important; min-width: 0 !important;
+        margin-left: 0 !important; margin-right: 0 !important;
+        box-sizing: border-box !important;
+    }
+
+    .preis-lando-topbar .preis-lando-mobile-search .input-group {
+        display: flex !important;
+    }
+    .preis-lando-topbar .preis-lando-mobile-search input {
+        flex: 1 1 auto !important; width: auto !important; max-width: none !important; min-width: 0 !important;
+    }
+
+    .preis-lando-mobile-drawer {
+        top: var(--pl-mobile-drawer-top, 94px) !important;
+        right: 0 !important; bottom: 0 !important; left: 0 !important;
+        inset: auto 0 0 0 !important;
+        width: 100vw !important; height: auto !important;
+        padding: 0 !important; background: transparent !important;
+    }
+    .preis-lando-mobile-drawer-panel {
+        position: absolute !important; inset: 0 !important;
+        width: 100% !important; max-width: none !important; height: 100% !important;
+        transform: none !important; box-shadow: none !important; background: #f3f3f3 !important;
+    }
+}
+
+/* =========================================================
+   v1.4.10 MOBILE – HEADER NACH OBEN / LEERRAUM ENTFERNEN
+   ========================================================= */
+@media (max-width: 767.98px) {
+    html,
+    body {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    #page-header-parent,
+    #page-header,
+    .preis-lando-topbar,
+    .preis-lando-topbar > .widget-inner,
+    .preis-lando-topbar.preis-lando-mobile-header,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner,
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items {
+        margin-top: 0 !important;
+        padding-top: 0 !important;
+        top: 0 !important;
+    }
+
+    .preis-lando-logo,
+    .preis-lando-topbar .preis-lando-logo,
+    .preis-lando-topbar .kategorie-mobile-button,
+    .preis-lando-topbar .controls {
+        margin-top: 0 !important;
+        align-self: start !important;
+    }
+
+    .preis-lando-topbar.preis-lando-mobile-header .top-bar-items,
+    .preis-lando-topbar.preis-lando-mobile-header > .widget-inner {
+        grid-template-rows: 52px 48px !important;
+        min-height: 100px !important;
+        padding: 0 8px !important;
+    }
+
+    .preis-lando-topbar .kategorie-mobile-button {
+        height: 52px !important;
+    }
+
+    .preis-lando-topbar .controls {
+        min-height: 52px !important;
+        height: 52px !important;
+    }
+
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        height: 38px !important;
+    }
+
+    .preis-lando-topbar .always-visible-search,
+    .preis-lando-topbar .preis-lando-mobile-search {
+        padding-top: 0 !important;
+        padding-bottom: 2px !important;
+        align-self: start !important;
+    }
+}
+
+
+/* =========================================================
+   v1.4.12 – FINALER MOBILER TESTSTAND
+   Nur mobil: Header -22px, Suche -15px, volle Suchbreite.
+   Desktop bleibt unverändert.
+   ========================================================= */
+@media (max-width: 767.98px) {
+    .preis-lando-topbar.preis-lando-mobile-header {
+        transform: translateY(-22px) !important;
+    }
+
+    .preis-lando-topbar .preis-lando-mobile-search,
+    .preis-lando-topbar .always-visible-search {
+        margin-top: -15px !important;
+    }
+
+    /* In der echten Plenty-DOM-Struktur war dieser Wrapper der Grund,
+       warum das sichtbare Suchfeld nur ca. 302px breit wurde. */
+    .preis-lando-topbar .always-visible-search > .container-max > .position-relative,
+    .preis-lando-topbar .preis-lando-mobile-search > .container-max > .position-relative {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: 1 1 100% !important;
+    }
+
+    .preis-lando-topbar .always-visible-search > .container-max > .position-relative > .d-flex,
+    .preis-lando-topbar .preis-lando-mobile-search > .container-max > .position-relative > .d-flex {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+
+    .preis-lando-topbar .always-visible-search input.search-input,
+    .preis-lando-topbar .preis-lando-mobile-search input.search-input {
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+}
+
+/* =========================================================
+   v1.4.15 – FINALER RESPONSIVE-STAND
+   - Desktop >=1200: vorhandenes 6+4 Plugin-Raster unangetastet
+   - 768–1199: 6+4 fest, Plenty-lg-Ausblendung neutralisiert
+   - <768: Mobile Header/Logo/Suche/Drawer stabil
+   ========================================================= */
+
+/* Desktop/Tablet-Logo und ShopBuilder-Kopf */
+@media (min-width: 768px) {
+    .preis-lando-logo {
+        position: relative !important;
+        z-index: 20 !important;
+        width: auto !important;
+        max-width: none !important;
+        transform: translateX(50px) !important;
+        overflow: visible !important;
+    }
+
+    .preis-lando-logo picture,
+    .preis-lando-logo img {
+        display: block !important;
+        height: 60px !important;
+        width: auto !important;
+        max-height: 60px !important;
+        max-width: none !important;
+        object-fit: contain !important;
+    }
+
+    .preis-lando-logo img {
+        transform: translateY(5px) !important;
+    }
+
+    .header-logo-suche {
+        column-gap: 0 !important;
+        gap: 0 !important;
+    }
+
+    .header-logo-suche > .widget-inner:has(.preis-lando-logo) {
+        flex: 0 0 auto !important;
+        width: auto !important;
+        max-width: none !important;
+        position: relative !important;
+        z-index: 20 !important;
+        overflow: visible !important;
+    }
+
+    .header-logo-suche > .widget-inner:has(.preis-lando-topbar) {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        padding-left: 0 !important;
+    }
+
+    .preis-lando-topbar {
+        position: relative !important;
+        z-index: 10 !important;
+        min-width: 0 !important;
+        max-width: none !important;
+    }
+
+    /* Bootstrap d-none d-lg-block blendet das Menü sonst <992px aus. */
+    .preis-lando-navigation .main-navbar-collapsable {
+        display: block !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+}
+
+/* Nur Tablet-Zwischenbereich: Navigation sichtbar und 2-zeilig halten. */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .preis-lando-navigation,
+    .preis-lando-navigation .container-max,
+    .preis-lando-navigation .row,
+    .preis-lando-navigation .main-navbar-collapsable {
+        overflow: visible !important;
+    }
+
+    .preis-lando-navigation-root {
+        width: 100% !important;
+        min-width: 100% !important;
+        max-width: none !important;
+        visibility: visible !important;
+    }
+}
+
+@media (min-width: 900px) and (max-width: 1049.98px) {
+    .preis-lando-nav-link { font-size: 12px !important; }
+}
+
+@media (min-width: 768px) and (max-width: 899.98px) {
+    .preis-lando-nav-link { font-size: 11px !important; }
+}
+
+/* Mobile: schon VOR dem JS-Verschieben klein halten. Dadurch kein großes
+   Zwischenlogo beim Wechsel um 768px. */
+@media (max-width: 767.98px) {
+    .preis-lando-logo,
+    .preis-lando-logo .widget-image-box {
+        width: 84px !important;
+        min-width: 84px !important;
+        max-width: 84px !important;
+        height: 48px !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 2px !important;
+        transform: none !important;
+        overflow: visible !important;
+    }
+
+    .preis-lando-logo picture,
+    .preis-lando-logo img,
+    .preis-lando-topbar .preis-lando-logo picture,
+    .preis-lando-topbar .preis-lando-logo img {
+        display: block !important;
+        height: 38px !important;
+        width: auto !important;
+        max-height: 38px !important;
+        max-width: 80px !important;
+        transform: none !important;
+        object-fit: contain !important;
+    }
+
+    .preis-lando-topbar.preis-lando-mobile-header {
+        transform: translateY(-22px) !important;
+    }
+
+    .preis-lando-topbar .preis-lando-mobile-search,
+    .preis-lando-topbar .always-visible-search {
+        margin-top: -15px !important;
+    }
+
+    .preis-lando-topbar .always-visible-search > .container-max > .position-relative,
+    .preis-lando-topbar .preis-lando-mobile-search > .container-max > .position-relative {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: 1 1 100% !important;
+    }
+
+    .preis-lando-topbar .always-visible-search > .container-max > .position-relative > .d-flex,
+    .preis-lando-topbar .preis-lando-mobile-search > .container-max > .position-relative > .d-flex {
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+
+    .preis-lando-topbar .always-visible-search input.search-input,
+    .preis-lando-topbar .preis-lando-mobile-search input.search-input {
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+
+    .preis-lando-mobile-tile-name {
+        padding-right: 0 !important;
+        font-size: 12px !important;
+    }
+
+    /* 66x60 -> insgesamt 4px kleiner als Ausgangsstand. */
+    .preis-lando-mobile-tile-image-wrap {
+        width: 62px !important;
+        height: 56px !important;
+    }
+
+    .preis-lando-mobile-drawer {
+        position: fixed !important;
+        inset: auto 0 0 0 !important;
+        top: var(--pl-mobile-drawer-top, 100px) !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: calc(100dvh - var(--pl-mobile-drawer-top, 100px)) !important;
+        padding: 0 !important;
+        background: transparent !important;
+    }
+
+    .preis-lando-mobile-drawer.is-open {
+        display: block !important;
+    }
+
+    .preis-lando-mobile-drawer-panel {
+        position: absolute !important;
+        inset: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: 100% !important;
+        background: #f3f3f3 !important;
+        box-shadow: none !important;
+        transform: none !important;
+        overflow-y: auto !important;
+    }
+}
+
+/* ============================================================
+   v1.4.15 – Tablet-Header 768–899px stabil in EINER Zeile
+   Messung: bei 899px sprang die Topbar auf top:60 / 132px Gesamthöhe.
+   ============================================================ */
+@media (min-width: 768px) and (max-width: 899.98px) {
+    .header-logo-suche {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+    }
+
+    .header-logo-suche > .widget-inner:first-child {
+        flex: 0 0 147px !important;
+        width: 147px !important;
+        max-width: 147px !important;
+    }
+
+    .header-logo-suche > .widget-inner:last-child {
+        flex: 1 1 auto !important;
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+    }
+
+    .preis-lando-topbar .top-bar-items.search-permanent,
+    .preis-lando-topbar .always-visible-search,
+    .preis-lando-topbar .controls,
+    .preis-lando-topbar .controls-list {
+        height: 72px !important;
+        min-height: 72px !important;
+    }
+
+    .preis-lando-topbar .top-bar-items.search-permanent,
+    .preis-lando-topbar .controls,
+    .preis-lando-topbar .controls-list {
+        align-items: center !important;
+    }
+
+    .preis-lando-topbar .controls {
+        display: flex !important;
+    }
+
+    .preis-lando-topbar .controls-list > li,
+    .preis-lando-topbar .controls-list > li > *,
+    .preis-lando-topbar .control-user > .position-relative {
+        height: 72px !important;
+        min-height: 72px !important;
+        align-items: center !important;
+    }
+}
+
+
+/* ============================================================
+   v1.4.16 – bestätigte F12-Anpassungen
+   - Tablet-Header 768–1199px stabil, kein Logo-Sprung
+   - Logo 6px höher
+   - Benutzer-Icons unter 920px sauber in einer Zeile
+   - Navigation unter 1056px: Text darf über die Grid-Zelle hinaus
+   - kompaktere Kategorien unter 900px
+   - kompaktere Header-Icons unter 1056px für mehr Suchbreite
+
+   WICHTIG:
+   Die bestehende Hover-Geometrie / graue Brücke wird NICHT verändert.
+   ============================================================ */
+
+/* Header/Logo ohne Zwischen-Breakpoint bis Mobile. */
+@media (min-width: 768px) and (max-width: 1199.98px) {
+    .header-logo-suche {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+    }
+
+    .header-logo-suche > .widget-inner:first-child {
+        flex: 0 0 147px !important;
+        width: 147px !important;
+        max-width: 147px !important;
+    }
+
+    .header-logo-suche > .widget-inner:last-child {
+        flex: 1 1 0 !important;
+        width: auto !important;
+        max-width: none !important;
+        min-width: 0 !important;
+    }
+
+    .preis-lando-logo {
+        position: relative !important;
+        top: -6px !important;
+        transform: translateX(50px) !important;
+    }
+}
+
+/* Unter ~920px hatte das anonyme DIV im Benutzer-Control 140px Höhe. */
+@media (min-width: 768px) and (max-width: 919.98px) {
+    .preis-lando-topbar
+    .control-user
+    > .position-relative
+    > div {
+        height: 72px !important;
+        min-height: 72px !important;
+        max-height: 72px !important;
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: center !important;
+        top: 0 !important;
+        margin: 0 !important;
+    }
+}
+
+/* 768–1055px: vorhandenes 6+4-Grid bleibt unverändert.
+   Nur Text-Clipping aufheben und Header-Controls kompakter machen. */
+@media (min-width: 768px) and (max-width: 1055px) {
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category {
+        overflow: visible !important;
+    }
+
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category
+    > .preis-lando-nav-link {
+        overflow: visible !important;
+        overflow-x: visible !important;
+        white-space: nowrap !important;
+        position: relative !important;
+        z-index: 2 !important;
+    }
+
+    /* Accessoires */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(1)
+    > .preis-lando-nav-link {
+        font-size: 10.5px !important;
+    }
+
+    /* Gedeckter Tisch */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(3)
+    > .preis-lando-nav-link {
+        font-size: 11px !important;
+        letter-spacing: -0.2px !important;
+    }
+
+    /* Gläser & Glaswaren */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(4)
+    > .preis-lando-nav-link {
+        font-size: 11px !important;
+        letter-spacing: -0.3px !important;
+    }
+
+    /* Kids */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(6)
+    > .preis-lando-nav-link {
+        font-size: 10.5px !important;
+    }
+
+    /* Controls enger -> mehr Platz für die Suche */
+    .preis-lando-topbar .controls {
+        flex: 0 0 auto !important;
+        width: auto !important;
+    }
+
+    .preis-lando-topbar .controls-list {
+        gap: 0 !important;
+        padding-left: 0 !important;
+    }
+
+    .preis-lando-topbar .control-user {
+        width: 105px !important;
+        flex: 0 0 105px !important;
+    }
+
+    .preis-lando-topbar .control-wish-list {
+        width: 48px !important;
+        flex: 0 0 48px !important;
+    }
+
+    .preis-lando-topbar .control-basket {
+        width: 100px !important;
+        flex: 0 0 100px !important;
+    }
+
+    .preis-lando-topbar .controls-list .nav-link {
+        padding-left: 6px !important;
+        padding-right: 6px !important;
+    }
+
+    .preis-lando-topbar .always-visible-search {
+        flex: 1 1 auto !important;
+        min-width: 0 !important;
+    }
+}
+
+/* Unter 900px die langen/äußeren Kategorien noch etwas kompakter. */
+@media (min-width: 768px) and (max-width: 900px) {
+    /* Accessoires + Kids */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(1)
+    > .preis-lando-nav-link,
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(6)
+    > .preis-lando-nav-link {
+        font-size: 10px !important;
+    }
+
+    /* Garten & Baumarkt */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(2)
+    > .preis-lando-nav-link {
+        font-size: 10.5px !important;
+        letter-spacing: -0.25px !important;
+    }
+
+    /* Gläser & Glaswaren */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(4)
+    > .preis-lando-nav-link {
+        font-size: 10.5px !important;
+        letter-spacing: -0.35px !important;
+    }
+
+    /* Weihnachtsshop */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(9)
+    > .preis-lando-nav-link {
+        font-size: 10px !important;
+        letter-spacing: -0.2px !important;
+    }
+
+    /* Wohnen & Deko */
+    .preis-lando-navigation-root
+    > .preis-lando-nav-category:nth-child(10)
+    > .preis-lando-nav-link {
+        font-size: 10px !important;
+        letter-spacing: -0.2px !important;
+    }
+}
+
+
+
+/* =========================================================
+   16. STARTSEITE v1.4.17
+   OTTO-artiger grauer Inhaltsbereich + kompakter Hero
+
+   ShopBuilder-Klassen:
+   Raster      = start-hero-grid
+   Garten      = start-hero-garten
+   Newsletter  = start-hero-newsletter
+   Sale        = start-hero-sale
+
+   Zielmaße durch Bildverhältnis:
+   Garten      ca. 440 x 250 px
+   Newsletter  ca. 240 x 120 px
+   Sale        ca. 240 x 120 px
+   Abstand     10 px
+   ========================================================= */
+
+body {
+    background: #f3f3f3 !important;
+}
+
+.header-container,
+#page-header-parent,
+.preis-lando-topbar,
+.preis-lando-logo,
+.preis-lando-navigation,
+.preis-lando-navigation-root {
+    background: #fff !important;
+    background-color: #fff !important;
+}
+
+.start-hero-grid {
+    display: grid !important;
+    grid-template-columns: max-content max-content !important;
+    grid-template-rows: 250px !important;
+    column-gap: 10px !important;
+    row-gap: 0 !important;
+
+    width: max-content !important;
+    max-width: calc(100vw - 30px) !important;
+
+    height: 250px !important;
+    min-height: 250px !important;
+    max-height: 250px !important;
+
+    margin: 10px auto 0 auto !important;
+    padding: 0 !important;
+
+    position: relative !important;
+    z-index: 1 !important;
+
+    background: transparent !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+}
+
+.start-hero-grid > .widget-inner {
+    width: max-content !important;
+    max-width: none !important;
+    min-width: 0 !important;
+
+    height: 250px !important;
+    min-height: 250px !important;
+    max-height: 250px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    flex: none !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+.start-hero-grid > .widget-inner:first-child > div {
+    width: max-content !important;
+
+    height: 250px !important;
+    min-height: 250px !important;
+    max-height: 250px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+}
+
+.start-hero-grid > .widget-inner:nth-child(2) > div {
+    display: grid !important;
+    grid-template-columns: max-content !important;
+    grid-template-rows: 120px 120px !important;
+    gap: 10px !important;
+
+    width: max-content !important;
+
+    height: 250px !important;
+    min-height: 250px !important;
+    max-height: 250px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+.start-hero-garten {
+    width: max-content !important;
+
+    height: 250px !important;
+    min-height: 250px !important;
+    max-height: 250px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    aspect-ratio: auto !important;
+    background: transparent !important;
+
+    border-radius: 10px !important;
+    overflow: hidden !important;
+}
+
+.start-hero-garten > a,
+.start-hero-garten picture {
+    display: block !important;
+    width: max-content !important;
+    height: 250px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.start-hero-garten img {
+    position: static !important;
+    display: block !important;
+
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+
+    height: 250px !important;
+    min-height: 0 !important;
+    max-height: 250px !important;
+
+    transform: none !important;
+    object-fit: contain !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.start-hero-newsletter,
+.start-hero-sale {
+    width: max-content !important;
+
+    height: 120px !important;
+    min-height: 120px !important;
+    max-height: 120px !important;
+
+    padding: 0 !important;
+    margin: 0 !important;
+
+    aspect-ratio: auto !important;
+    background: transparent !important;
+
+    border-radius: 10px !important;
+    overflow: hidden !important;
+}
+
+.start-hero-newsletter > a,
+.start-hero-newsletter picture,
+.start-hero-sale > a,
+.start-hero-sale picture {
+    display: block !important;
+    width: max-content !important;
+    height: 120px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.start-hero-newsletter img,
+.start-hero-sale img {
+    position: static !important;
+    display: block !important;
+
+    width: auto !important;
+    max-width: none !important;
+    min-width: 0 !important;
+
+    height: 120px !important;
+    min-height: 0 !important;
+    max-height: 120px !important;
+
+    transform: none !important;
+    object-fit: contain !important;
+
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+
+/* =========================================================
+   17. DESKTOP-HOVER v1.4.17
+   Mega-Menü liegt über dem Seiteninhalt und verschiebt
+   die Startseite nicht mehr nach unten.
+   Hover-JavaScript / Brückenlogik aus Plugin v1.4.16
+   bleiben unverändert.
+   ========================================================= */
+
+@media (min-width: 768px) {
+    .preis-lando-navigation,
+    .preis-lando-navigation > .widget-inner,
+    .preis-lando-navigation-root {
+        overflow: visible !important;
+    }
+
+    .preis-lando-navigation {
+        position: relative !important;
+        z-index: 10000 !important;
+    }
+
+    .preis-lando-navigation-root {
+        position: relative !important;
+        z-index: 10001 !important;
+    }
+
+    .preis-lando-navigation-root > .preis-lando-hover-menu {
+        position: absolute !important;
+        top: 64px !important;
+
+        left: 50% !important;
+        right: auto !important;
+
+        width: 100vw !important;
+        min-width: 100vw !important;
+        max-width: 100vw !important;
+
+        transform: translateX(-50%) !important;
+
+        margin: 0 !important;
+        z-index: 10002 !important;
+    }
+
+    .preis-lando-navigation-root > .preis-lando-hover-menu.is-visible {
+        display: block !important;
+    }
+}
+
+/* =========================================================
+   PREISLANDO STARTSEITE – SAFE PATCH v1.4.20
+   Basis: vorhandene v1.4.17 bleibt unangetastet.
+   Dieser Block darf NUR ganz unten angehängt werden.
+   Keine Änderung an Navigation, Suche, Logo oder Mobile-Menü.
+   ========================================================= */
+
+:root {
+    --pl-start-green: #51c817;
+    --pl-start-bg: #f3f3f3;
+    --pl-start-border: #e3e3e3;
+    --pl-start-text: #171717;
+    --pl-start-muted: #6f6f6f;
+    --pl-start-radius: 10px;
+}
+
+/* ---------------------------------------------------------
+   A) HEADER: nur weiße Fläche bis zum Browserrand erweitern.
+   WICHTIG: Die vorhandene 1400px-Geometrie wird NICHT geändert.
+   Dadurch bleiben Logo/Suche/Navigation an ihrer Position.
+   --------------------------------------------------------- */
+#page-header-parent {
+    position: relative !important;
+}
+
+#page-header-parent::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+    background: #fff;
+    pointer-events: none;
+    z-index: 0;
+}
+
+#page-header-parent > * {
+    position: relative;
+    z-index: 1;
+}
+
+/* ---------------------------------------------------------
+   B) ARTIKELLISTEN
+   Klassen auf das jeweilige ShopBuilder-Widget "Artikelliste":
+   Bestseller          = start-produkte start-bestseller
+   Aktuelle Angebote   = start-produkte start-angebote
+   Neu bei PreisLando  = start-produkte start-neu
+
+   Im Widget selbst bitte "Anzahl der sichtbaren Artikel" = 5.
+   Die Anzahl wird absichtlich NICHT per CSS erzwungen.
+   --------------------------------------------------------- */
+.start-produkte {
+    margin: 10px 0 !important;
+    padding: 10px 12px 12px !important;
+    background: #fff !important;
+    border-radius: var(--pl-start-radius) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05) !important;
+    overflow: hidden !important;
+}
+
+/* rote/gefärbte Überschriftsleiste des Plenty-Erscheinungsbilds neutralisieren */
+.start-produkte .widget-caption,
+.start-produkte .widget-title,
+.start-produkte [class*="widget-caption"],
+.start-produkte h1,
+.start-produkte h2,
+.start-produkte h3,
+.start-produkte h4 {
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--pl-start-text) !important;
+    border: 0 !important;
+    box-shadow: none !important;
+}
+
+.start-produkte .widget-caption,
+.start-produkte .widget-title,
+.start-produkte h2,
+.start-produkte h3 {
+    margin: 0 0 9px !important;
+    padding: 0 !important;
+    font-size: 24px !important;
+    line-height: 1.15 !important;
+    font-weight: 700 !important;
+}
+
+/* Plenty-eigene Artikelliste nicht umbauen; nur Abstände/Karten gestalten */
+.start-produkte .product-list {
+    margin-left: -5px !important;
+    margin-right: -5px !important;
+}
+
+.start-produkte .product-list li {
+    padding-left: 5px !important;
+    padding-right: 5px !important;
+}
+
+.start-produkte .cmp-product-thumb {
+    height: 100% !important;
+    background: #fff !important;
+    border: 1px solid var(--pl-start-border) !important;
+    border-radius: 7px !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+}
+
+.start-produkte .cmp-product-thumb:hover {
+    box-shadow: 0 3px 12px rgba(0,0,0,.08) !important;
+}
+
+.start-produkte .cmp-product-thumb img,
+.start-produkte .owl-lazy {
+    object-fit: contain !important;
+}
+
+.start-produkte .thumb-title {
+    color: #252525 !important;
+}
+
+.start-produkte .add-to-basket-lg-container .btn,
+.start-produkte .btn-primary,
+.start-produkte .btn-success {
+    background-color: var(--pl-start-green) !important;
+    border-color: var(--pl-start-green) !important;
+}
+
+/* Angebotsbereich: Preis darf rot bleiben */
+.start-angebote .special-offer,
+.start-angebote .price.special-offer,
+.start-angebote .sales-price {
+    color: #e30613 !important;
+}
+
+/* ---------------------------------------------------------
+   C) HERBSTBANNER
+   Äußeres Struktur-/Zeilen-Widget: start-herbst-banner
+   Bildbox darin zusätzlich:      start-herbst-banner-img
+   --------------------------------------------------------- */
+.start-herbst-banner {
+    margin: 10px 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    background: transparent !important;
+    overflow: hidden !important;
+    border-radius: var(--pl-start-radius) !important;
+}
+
+.start-herbst-banner > .widget-inner,
+.start-herbst-banner > .widget-inner > div,
+.start-herbst-banner .start-herbst-banner-img,
+.start-herbst-banner .start-herbst-banner-img > .widget-inner,
+.start-herbst-banner .widget-image-box {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    background: transparent !important;
+}
+
+.start-herbst-banner .start-herbst-banner-img,
+.start-herbst-banner .start-herbst-banner-img a,
+.start-herbst-banner .start-herbst-banner-img picture,
+.start-herbst-banner .start-herbst-banner-img img,
+.start-herbst-banner .widget-image-box a,
+.start-herbst-banner .widget-image-box picture,
+.start-herbst-banner .widget-image-box img {
+    display: block !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.start-herbst-banner .start-herbst-banner-img img,
+.start-herbst-banner .widget-image-box img {
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    transform: none !important;
+}
+
+.start-herbst-banner .widget-caption:empty,
+.start-herbst-banner .start-herbst-banner-img .widget-caption:empty {
+    display: none !important;
+}
+
+/* ---------------------------------------------------------
+   D) IDEEN FÜR DEIN ZUHAUSE
+   Äußeres Struktur-Widget = start-ideen
+   --------------------------------------------------------- */
+.start-ideen {
+    margin: 10px 0 !important;
+    padding: 12px !important;
+    background: #fff !important;
+    border-radius: var(--pl-start-radius) !important;
+}
+
+.start-ideen h2,
+.start-ideen h3 {
+    margin: 0 0 10px !important;
+    color: var(--pl-start-text) !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+}
+
+/* ---------------------------------------------------------
+   E) SERVICELEISTE
+   HTML-Widget = start-serviceleiste
+   Passendes HTML liegt separat bei.
+   --------------------------------------------------------- */
+.start-serviceleiste {
+    margin: 10px 0 !important;
+    padding: 0 !important;
+}
+
+.start-serviceleiste .pl-servicebar {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0,1fr));
+    gap: 0;
+    background: #fff;
+    border-radius: var(--pl-start-radius);
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05);
+}
+
+.start-serviceleiste .pl-serviceitem {
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 11px;
+    padding: 10px 16px;
+    color: var(--pl-start-text);
+    background: #fff;
+}
+
+.start-serviceleiste .pl-serviceitem + .pl-serviceitem {
+    border-left: 1px solid #ededed;
+}
+
+.start-serviceleiste .pl-serviceicon {
+    flex: 0 0 auto;
+    font-size: 28px;
+    line-height: 1;
+    color: var(--pl-start-green);
+}
+
+.start-serviceleiste .pl-servicetext strong {
+    display: block;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.2;
+}
+
+.start-serviceleiste .pl-servicetext span {
+    display: block;
+    margin-top: 2px;
+    font-size: 10px;
+    line-height: 1.25;
+    color: var(--pl-start-muted);
+}
+
+.start-serviceleiste .pl-brand {
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.start-serviceleiste .pl-paypal { color: #163b73; }
+.start-serviceleiste .pl-dhl { color: #d40511; }
+.start-serviceleiste .pl-dpd { color: #dc0032; }
+
+/* ---------------------------------------------------------
+   F) NEWSLETTER
+   Klasse auf das ECHTE Plenty-Newsletter-Widget bzw. dessen
+   äußeres Struktur-Widget = start-newsletter
+   --------------------------------------------------------- */
+.start-newsletter {
+    margin: 10px 0 18px !important;
+    padding: 18px 22px !important;
+    background: #fff !important;
+    border-radius: var(--pl-start-radius) !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,.05) !important;
+}
+
+.start-newsletter h1,
+.start-newsletter h2,
+.start-newsletter h3,
+.start-newsletter h4 {
+    color: var(--pl-start-text) !important;
+}
+
+.start-newsletter .form-control,
+.start-newsletter input[type="email"],
+.start-newsletter input[type="text"] {
+    min-height: 42px !important;
+    border-color: #d7d7d7 !important;
+    box-shadow: none !important;
+}
+
+.start-newsletter .btn,
+.start-newsletter button {
+    min-height: 42px !important;
+}
+
+.start-newsletter .btn-primary,
+.start-newsletter .btn-success,
+.start-newsletter button[type="submit"] {
+    background-color: var(--pl-start-green) !important;
+    border-color: var(--pl-start-green) !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+}
+
+/* ---------------------------------------------------------
+   G) RESPONSIVE – nur die neuen Startseitenklassen
+   --------------------------------------------------------- */
+@media (max-width: 991.98px) {
+    .start-serviceleiste .pl-servicebar {
+        grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+
+    .start-serviceleiste .pl-serviceitem:nth-child(3) {
+        border-left: 0;
+        border-top: 1px solid #ededed;
+    }
+
+    .start-serviceleiste .pl-serviceitem:nth-child(4) {
+        border-top: 1px solid #ededed;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .start-produkte {
+        padding: 9px 8px 10px !important;
+    }
+
+    .start-produkte .widget-caption,
+    .start-produkte .widget-title,
+    .start-produkte h2,
+    .start-produkte h3,
+    .start-ideen h2,
+    .start-ideen h3 {
+        font-size: 20px !important;
+    }
+
+    .start-serviceleiste .pl-serviceitem {
+        justify-content: flex-start;
+        min-height: 66px;
+        padding: 9px 11px;
+    }
+
+    .start-newsletter {
+        padding: 15px 14px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .start-serviceleiste .pl-servicebar {
+        grid-template-columns: 1fr;
+    }
+
+    .start-serviceleiste .pl-serviceitem + .pl-serviceitem,
+    .start-serviceleiste .pl-serviceitem:nth-child(3),
+    .start-serviceleiste .pl-serviceitem:nth-child(4) {
+        border-left: 0;
+        border-top: 1px solid #ededed;
+    }
+}
+
+/* =========================================================
+   PREISLANDO LIVE-F12 FIX – 2026-09-15
+   Exakt nach der tatsächlichen ShopBuilder-DOM-Struktur.
+   ========================================================= */
+
+/* 1) Graue Desktop-Headerfläche */
 @media (min-width: 768px) {
     .header-logo-suche,
     .header-logo-suche > .widget-inner,
@@ -740,7 +3123,6 @@ body.preis-lando-mobile-menu-open {
 .start-bestseller .widget-caption.widget-item-list-caption.bg-appearance,
 .start-angebote .widget-caption.widget-item-list-caption.bg-appearance,
 .start-neu .widget-caption.widget-item-list-caption.bg-appearance {
-    display: block !important;
     width: 100% !important;
     margin: 0 0 12px 0 !important;
     padding: 0 !important;
@@ -772,14 +3154,12 @@ body.preis-lando-mobile-menu-open {
     font-weight: 700 !important;
 }
 
-/* 3) Newsletter – unterstützt die aktuell live vorhandene Außenklasse
-      start-newsletter-note UND die später saubere start-newsletter-row. */
+/* 3) Newsletter – echte Live-DOM */
 .start-newsletter-row,
 .widget.widget-grid.widget-three-col.row.start-newsletter-note {
-    margin: 10px 0 18px 0 !important;
+    margin: 10px 0 18px !important;
     padding: 14px 10px !important;
     background: #fff !important;
-    background-color: #fff !important;
     border-radius: 10px !important;
     box-sizing: border-box !important;
     align-items: center !important;
@@ -790,8 +3170,6 @@ body.preis-lando-mobile-menu-open {
     display: flex !important;
     align-items: center !important;
     min-width: 0 !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
 }
 
 .start-newsletter-copy,
@@ -819,7 +3197,7 @@ body.preis-lando-mobile-menu-open {
 }
 
 .start-newsletter-copy .pl-news-title {
-    margin: 0 0 3px 0 !important;
+    margin: 0 0 3px !important;
     color: #111 !important;
     font-size: 17px !important;
     line-height: 21px !important;
@@ -895,8 +3273,6 @@ body.preis-lando-mobile-menu-open {
     border-radius: 6px 0 0 6px !important;
     box-shadow: none !important;
     box-sizing: border-box !important;
-    font-size: 13px !important;
-    line-height: 40px !important;
 }
 
 .start-newsletter-form input.honey,
@@ -931,7 +3307,6 @@ body.preis-lando-mobile-menu-open {
     border: 1px solid #51c817 !important;
     border-radius: 0 6px 6px 0 !important;
     font-size: 13px !important;
-    line-height: 40px !important;
     font-weight: 700 !important;
     white-space: nowrap !important;
     box-sizing: border-box !important;
@@ -942,7 +3317,7 @@ body.preis-lando-mobile-menu-open {
     grid-row: 2 !important;
     width: 100% !important;
     max-width: none !important;
-    margin: 3px 0 0 0 !important;
+    margin: 3px 0 0 !important;
     padding: 0 !important;
 }
 
@@ -976,14 +3351,11 @@ body.preis-lando-mobile-menu-open {
     transform: rotate(-4deg) !important;
 }
 
-/* eindeutiger Marker zum Prüfen per F12 */
-html { --pl-f12-fix-14162: 1; }
+/* Marker: wenn dieser Wert 1 ist, kommt das komplette PreisLando-CSS aus dem Plugin. */
+html { --pl-all-css-plugin: 1; }
 
 @media (max-width: 767.98px) {
-    .start-newsletter-form form > .row {
-        display: block !important;
-    }
-
+    .start-newsletter-form form > .row { display: block !important; }
     .start-newsletter-form form > .row > .col-12:first-child,
     .start-newsletter-form form > .row > .col-12:nth-child(2),
     .start-newsletter-form form > .row > .col-12.mt-3,
@@ -991,15 +3363,12 @@ html { --pl-f12-fix-14162: 1; }
         width: 100% !important;
         max-width: 100% !important;
     }
-
     .start-newsletter-form input[type="email"],
     .start-newsletter-form button[data-testing="nl-send"] {
         border-radius: 6px !important;
     }
-
     .start-newsletter-form form > .row > .col-12.mt-3 {
         margin-top: 6px !important;
     }
 }
-
 </style>

@@ -3886,4 +3886,65 @@ html {
     --pl-cart-green-plugin: 1;
 }
 
+
+
+/* =========================================================
+   v1.4.17.7 – ARTIKELDETAIL / WEITERE DETAILS
+   Exakt nach live per F12 bestätigter Struktur.
+   ========================================================= */
+
+/* kompletter "Weitere Details"-Block weiß */
+.widget-inner:has(> .nav.nav-tabs.widget-primary) {
+    background: #fff !important;
+    background-color: #fff !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+    border-radius: 4px !important;
+}
+
+/* Tabs sauber integrieren */
+.widget-inner:has(> .nav.nav-tabs.widget-primary) > .nav-tabs {
+    margin: 0 0 14px 0 !important;
+}
+
+/* Detailbereich ohne graue Fremdhintergründe */
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .tab-content,
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .tab-pane,
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .widget-item-data-table,
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .widget-item-data-table > .widget-inner {
+    background: #fff !important;
+    background-color: #fff !important;
+}
+
+/* Tabellenzeilen weiß */
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .table,
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .table tbody,
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .table tr,
+.widget-inner:has(> .nav.nav-tabs.widget-primary) .table td {
+    background: #fff !important;
+    background-color: #fff !important;
+}
+
+/* Klassen, die das Script für bestätigte Warenkorb-/Produktboxen setzt */
+.pl-cart-lower-panel-v2,
+.pl-product-main-box {
+    background: #fff !important;
+    background-color: #fff !important;
+    box-sizing: border-box !important;
+    border-radius: 4px !important;
+}
+
+.pl-cart-lower-panel-v2 {
+    padding: 18px !important;
+}
+
+.pl-product-main-box {
+    padding: 20px !important;
+}
+
+/* Marker */
+html {
+    --pl-product-details-plugin: 1;
+}
+
 </style>

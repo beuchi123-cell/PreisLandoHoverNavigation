@@ -3120,42 +3120,40 @@ body {
 }
 
 /* 2) Native Plenty-Artikellistenüberschriften */
-.start-bestseller .widget-caption.widget-item-list-caption.bg-appearance,
-.start-angebote .widget-caption.widget-item-list-caption.bg-appearance,
-.start-neu .widget-caption.widget-item-list-caption.bg-appearance {
+/* Alle Plenty-Artikellisten einheitlich im PreisLando-Look */
+.widget-item-list-caption.bg-appearance {
     width: 100% !important;
     min-height: 28px !important;
     margin: 0 !important;
     padding: 0 !important;
     background: #51c817 !important;
     background-color: #51c817 !important;
-    color: #111 !important;
+    color: #fff !important;
     border: 0 !important;
     border-radius: 8px 8px 0 0 !important;
     box-sizing: border-box !important;
 }
 
-/* Bestseller nutzt H2, Aktuelle Angebote nutzt P.
-   Deshalb werden beide Strukturen bewusst gleich behandelt. */
-.start-bestseller .widget-caption.widget-item-list-caption.bg-appearance > div,
-.start-angebote .widget-caption.widget-item-list-caption.bg-appearance > div,
-.start-neu .widget-caption.widget-item-list-caption.bg-appearance > div {
+.widget-item-list-caption.bg-appearance > div {
     min-height: 28px !important;
     margin: 0 !important;
     padding: 0 !important;
     background: transparent !important;
 }
 
-.start-bestseller .widget-caption.widget-item-list-caption.bg-appearance :is(h1, h2, h3, h4, p),
-.start-angebote .widget-caption.widget-item-list-caption.bg-appearance :is(h1, h2, h3, h4, p),
-.start-neu .widget-caption.widget-item-list-caption.bg-appearance :is(h1, h2, h3, h4, p) {
+.widget-item-list-caption.bg-appearance :is(h1, h2, h3, h4, p) {
     margin: 0 !important;
     padding: 0 14px !important;
-    color: #111 !important;
+    color: #fff !important;
     background: transparent !important;
     font-size: 16px !important;
     line-height: 28px !important;
     font-weight: 700 !important;
+}
+
+.widget-item-list-caption.bg-appearance a,
+.widget-item-list-caption.bg-appearance i {
+    color: #fff !important;
 }
 
 /* 3) Newsletter – echte Live-DOM */
@@ -3661,6 +3659,8 @@ html { --pl-all-css-plugin: 1; }
     margin: 0 auto;
 }
 
+/* aktuelle Plenty-CDN-Hintergründe */
+/* Ticket-Hintergrundbilder werden bewusst im Custom-CSS gepflegt. */
 
 /* Tablet */
 @media (max-width: 991.98px) {
@@ -3724,6 +3724,166 @@ html { --pl-all-css-plugin: 1; }
 /* Marker für F12-Prüfung */
 html {
     --pl-ticket-hero-plugin: 1;
+}
+
+
+
+/* =========================================================
+   v1.4.17.4 – SCHNELLSUCHE ALS OVERLAY
+   - Trefferliste schiebt die Seite nicht mehr nach unten
+   - Trefferliste liegt über Navigation und Seiteninhalt
+   - Logo bleibt vollständig sichtbar über der Topbar
+   ========================================================= */
+@media (min-width: 768px) {
+
+    /* Suchbereich als Bezugspunkt */
+    .preis-lando-topbar .always-visible-search .position-relative {
+        position: relative !important;
+    }
+
+    /* Header-/Topbar-Stacking */
+    .header-logo-suche {
+        position: relative !important;
+        z-index: 30000 !important;
+    }
+
+    .header-logo-suche > .widget-inner:has(.preis-lando-topbar),
+    .preis-lando-topbar {
+        position: relative !important;
+        z-index: 30001 !important;
+    }
+
+    .preis-lando-topbar .always-visible-search {
+        position: relative !important;
+        z-index: 30002 !important;
+    }
+
+    /* Suchergebnisliste schwebt über der Seite */
+    .autocomplete-suggestions {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        right: 0 !important;
+
+        width: 100% !important;
+        max-width: none !important;
+
+        margin: 0 !important;
+
+        z-index: 30003 !important;
+
+        background: #fff !important;
+        box-shadow: 0 6px 18px rgba(0,0,0,.18) !important;
+    }
+
+    /* Logo bewusst über der Topbar lassen */
+    .header-logo-suche > .widget-inner:has(.preis-lando-logo) {
+        position: relative !important;
+        z-index: 30004 !important;
+        overflow: visible !important;
+    }
+
+    .header-logo-suche .preis-lando-logo {
+        position: relative !important;
+        z-index: 30005 !important;
+        overflow: visible !important;
+    }
+
+    /* Navigation darunter */
+    .preis-lando-navigation,
+    .preis-lando-navigation-root {
+        position: relative !important;
+        z-index: 10000 !important;
+    }
+}
+
+/* Marker für F12-Prüfung */
+html {
+    --pl-search-overlay-plugin: 1;
+}
+
+
+
+/* =========================================================
+   v1.4.17.5 – PRODUKTKARTEN
+   - Textblock mit mehr Innenabstand
+   - Verkaufspreis rot
+   - UVP grau, Durchstreichung rot
+   ========================================================= */
+
+.cmp-product-thumb .thumb-content {
+    padding: 12px 14px 14px !important;
+    box-sizing: border-box !important;
+}
+
+.cmp-product-thumb .thumb-title {
+    display: block !important;
+    margin-bottom: 6px !important;
+}
+
+.cmp-product-thumb .prices .price {
+    color: #d71920 !important;
+    font-weight: 600 !important;
+}
+
+.cmp-product-thumb .prices .crossprice {
+    color: #888 !important;
+    text-decoration-line: line-through !important;
+    text-decoration-color: #d71920 !important;
+    text-decoration-thickness: 1.5px !important;
+}
+
+html {
+    --pl-productcard-plugin: 1;
+}
+
+
+
+/* =========================================================
+   v1.4.17.6 – GLOBAL GRÜN + WARENKORB
+   ========================================================= */
+
+/* Hover-Kreis auf Produktkarten */
+.cmp-product-thumb .add-to-basket-lg-container {
+    background: #51c817 !important;
+    background-color: #51c817 !important;
+    color: #fff !important;
+}
+
+.cmp-product-thumb .add-to-basket-lg-container i {
+    color: #fff !important;
+}
+
+/* Warenkorb-Überschrift */
+.pl-cart-title-bar {
+    background: #51c817 !important;
+    background-color: #51c817 !important;
+}
+
+.pl-cart-title {
+    color: #fff !important;
+}
+
+/* Unterer Warenkorbbereich */
+.pl-cart-lower-panel {
+    background: #fff !important;
+    background-color: #fff !important;
+    padding: 18px !important;
+    box-sizing: border-box !important;
+}
+
+/* KASSE nur beim Hover/Focus grün */
+.pl-cart-checkout-button:hover,
+.pl-cart-checkout-button:focus {
+    background: #51c817 !important;
+    background-color: #51c817 !important;
+    border-color: #51c817 !important;
+    color: #fff !important;
+}
+
+/* Marker */
+html {
+    --pl-cart-green-plugin: 1;
 }
 
 </style>

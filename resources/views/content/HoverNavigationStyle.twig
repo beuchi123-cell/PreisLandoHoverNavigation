@@ -3124,7 +3124,8 @@ body {
 .start-angebote .widget-caption.widget-item-list-caption.bg-appearance,
 .start-neu .widget-caption.widget-item-list-caption.bg-appearance {
     width: 100% !important;
-    margin: 0 0 12px 0 !important;
+    min-height: 28px !important;
+    margin: 0 !important;
     padding: 0 !important;
     background: #51c817 !important;
     background-color: #51c817 !important;
@@ -3134,23 +3135,26 @@ body {
     box-sizing: border-box !important;
 }
 
+/* Bestseller nutzt H2, Aktuelle Angebote nutzt P.
+   Deshalb werden beide Strukturen bewusst gleich behandelt. */
 .start-bestseller .widget-caption.widget-item-list-caption.bg-appearance > div,
 .start-angebote .widget-caption.widget-item-list-caption.bg-appearance > div,
 .start-neu .widget-caption.widget-item-list-caption.bg-appearance > div {
+    min-height: 28px !important;
     margin: 0 !important;
     padding: 0 !important;
     background: transparent !important;
 }
 
-.start-bestseller .widget-caption.widget-item-list-caption.bg-appearance h2,
-.start-angebote .widget-caption.widget-item-list-caption.bg-appearance h2,
-.start-neu .widget-caption.widget-item-list-caption.bg-appearance h2 {
+.start-bestseller .widget-caption.widget-item-list-caption.bg-appearance :is(h1, h2, h3, h4, p),
+.start-angebote .widget-caption.widget-item-list-caption.bg-appearance :is(h1, h2, h3, h4, p),
+.start-neu .widget-caption.widget-item-list-caption.bg-appearance :is(h1, h2, h3, h4, p) {
     margin: 0 !important;
-    padding: 8px 14px !important;
+    padding: 0 14px !important;
     color: #111 !important;
     background: transparent !important;
-    font-size: 20px !important;
-    line-height: 26px !important;
+    font-size: 16px !important;
+    line-height: 28px !important;
     font-weight: 700 !important;
 }
 
@@ -3371,4 +3375,370 @@ html { --pl-all-css-plugin: 1; }
         margin-top: 6px !important;
     }
 }
+
+
+/* =========================================================
+   PREISLANDO – TICKET HERO v1.1
+   Code-Widget-Lösung für die 3 Startseiten-Banner
+   FINALER TESTSTAND:
+   - max. 900px breit
+   - 180px Gesamthöhe
+   - rechte Tickets je 85px + 10px Abstand
+   - gestrichelte Linie 2px
+   ========================================================= */
+
+.pl-ticket-hero {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 900px;
+    height: 180px;
+    margin: 12px auto 16px;
+}
+
+.pl-ticket-hero__side {
+    display: grid;
+    grid-template-rows: 85px 85px;
+    gap: 10px;
+    height: 180px;
+}
+
+.pl-ticket-card {
+    --ticket-bg: #ffffff;
+    --ticket-page-bg: #f3f3f3;
+    --ticket-radius: 16px;
+    --ticket-notch: 16px;
+
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    border-radius: var(--ticket-radius);
+    background-color: var(--ticket-bg);
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    text-decoration: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+    isolation: isolate;
+}
+
+/* Ticket-Aussparungen links / rechts */
+.pl-ticket-card::before,
+.pl-ticket-card::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: calc(var(--ticket-notch) * 2);
+    height: calc(var(--ticket-notch) * 2);
+    border-radius: 50%;
+    background: var(--ticket-page-bg);
+    transform: translateY(-50%);
+    z-index: 3;
+    pointer-events: none;
+}
+
+.pl-ticket-card::before {
+    left: calc(var(--ticket-notch) * -1);
+}
+
+.pl-ticket-card::after {
+    right: calc(var(--ticket-notch) * -1);
+}
+
+/* dünne Kontur an den Ticket-Aussparungen */
+.pl-ticket-card__edge {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    border-radius: var(--ticket-radius);
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,.10);
+}
+
+.pl-ticket-card__edge::before,
+.pl-ticket-card__edge::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: calc(var(--ticket-notch) * 2);
+    height: calc(var(--ticket-notch) * 2);
+    border-radius: 50%;
+    transform: translateY(-50%);
+    box-shadow: 0 0 0 1px rgba(0,0,0,.14);
+}
+
+.pl-ticket-card__edge::before {
+    left: calc(var(--ticket-notch) * -1);
+}
+
+.pl-ticket-card__edge::after {
+    right: calc(var(--ticket-notch) * -1);
+}
+
+/* Overlay für bessere Lesbarkeit */
+.pl-ticket-card__overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    background:
+        linear-gradient(to top,
+            rgba(255,255,255,.90) 0%,
+            rgba(255,255,255,.66) 34%,
+            rgba(255,255,255,.12) 72%,
+            rgba(255,255,255,.02) 100%);
+}
+
+.pl-ticket-card__content {
+    position: relative;
+    z-index: 4;
+    display: block;
+    padding: 22px;
+    color: #13281b;
+}
+
+/* optionale kleine Ecke oben */
+.pl-ticket-card__badge {
+    position: absolute;
+    top: 14px;
+    left: 18px;
+    z-index: 4;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255,255,255,.90);
+    color: #2e2e2e;
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0,0,0,.08);
+}
+
+.pl-ticket-card__title {
+    display: block;
+    margin: 0 0 4px;
+    font-size: 28px;
+    line-height: 1.08;
+    font-weight: 800;
+    color: #0f4d20;
+}
+
+.pl-ticket-card__subtitle {
+    display: block;
+    margin: 0 0 16px;
+    font-size: 16px;
+    line-height: 1.25;
+    font-weight: 600;
+    color: #203326;
+}
+
+.pl-ticket-card__cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: #63ca1b;
+    color: #fff;
+    font-size: 16px;
+    line-height: 18px;
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 1px 3px rgba(0,0,0,.10);
+}
+
+.pl-ticket-card__cta::after {
+    content: "›";
+    font-size: 24px;
+    line-height: 1;
+    margin-top: -1px;
+}
+
+/* kräftigere gestrichelte Ticket-Trennlinie */
+.pl-ticket-card__footer-line {
+    position: absolute;
+    left: 22px;
+    right: 22px;
+    bottom: 68px;
+    z-index: 4;
+    border-top: 2px dashed rgba(0,0,0,.35);
+}
+
+/* große Karte links */
+.pl-ticket-card--big {
+    height: 180px;
+    min-height: 0;
+    max-height: 180px;
+}
+
+.pl-ticket-card--big .pl-ticket-card__content {
+    padding: 14px 20px;
+}
+
+.pl-ticket-card--big .pl-ticket-card__title {
+    font-size: 54px;
+    line-height: .98;
+    letter-spacing: -.8px;
+}
+
+.pl-ticket-card--big .pl-ticket-card__subtitle {
+    font-size: 18px;
+    line-height: 1.22;
+    margin-bottom: 18px;
+}
+
+/* kleine Karten rechts */
+.pl-ticket-card--small {
+    height: 85px;
+    min-height: 0;
+    max-height: 85px;
+}
+
+.pl-ticket-card--small .pl-ticket-card__content {
+    padding: 8px 16px;
+}
+
+.pl-ticket-card--small .pl-ticket-card__title {
+    font-size: 22px;
+    line-height: 1.02;
+}
+
+.pl-ticket-card--small .pl-ticket-card__subtitle {
+    font-size: 14px;
+    line-height: 1.2;
+    margin-bottom: 12px;
+}
+
+.pl-ticket-card--small .pl-ticket-card__cta {
+    padding: 9px 16px;
+    font-size: 14px;
+    line-height: 16px;
+}
+
+.pl-ticket-card--small .pl-ticket-card__footer-line {
+    bottom: 54px;
+    left: 18px;
+    right: 18px;
+}
+
+/* Farben / spezielle Typen */
+.pl-ticket-card--newsletter .pl-ticket-card__title {
+    color: #1b1f28;
+}
+
+.pl-ticket-card--newsletter .pl-ticket-card__title strong {
+    color: #63ca1b;
+    font-size: 60px;
+    line-height: .9;
+    font-weight: 900;
+    display: inline-block;
+    margin-right: 4px;
+    vertical-align: baseline;
+}
+
+.pl-ticket-card--sale .pl-ticket-card__title {
+    color: #fff;
+    text-shadow: 0 2px 10px rgba(0,0,0,.14);
+    font-size: 56px;
+    line-height: .95;
+}
+
+.pl-ticket-card--sale .pl-ticket-card__overlay {
+    background:
+        linear-gradient(to top,
+            rgba(255,255,255,.78) 0%,
+            rgba(255,255,255,.52) 32%,
+            rgba(255,255,255,.10) 100%);
+}
+
+.pl-ticket-card--sale .pl-ticket-card__content {
+    text-align: center;
+}
+
+.pl-ticket-card--sale .pl-ticket-card__cta {
+    margin: 0 auto;
+}
+
+/* aktuelle Plenty-CDN-Hintergründe */
+.pl-ticket-card--garten {
+    background-image:
+        url("https://cdn02.plentyone.com/txddaqsiwduy/frontend/ChatGPT_Image_16._Sept._2026__10_19_23__1_.png");
+}
+
+.pl-ticket-card--newsletter {
+    background-image:
+        url("https://cdn02.plentyone.com/txddaqsiwduy/frontend/ChatGPT_Image_16._Sept._2026__10_19_24__2_.png");
+}
+
+.pl-ticket-card--sale {
+    background-image:
+        url("https://cdn02.plentyone.com/txddaqsiwduy/frontend/ChatGPT_Image_16._Sept._2026__10_19_24__3_.png");
+}
+
+/* Tablet */
+@media (max-width: 991.98px) {
+    .pl-ticket-hero {
+        grid-template-columns: 1fr;
+        height: auto;
+    }
+
+    .pl-ticket-hero__side {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto;
+        height: auto;
+    }
+
+    .pl-ticket-card--big {
+        height: 180px;
+    }
+
+    .pl-ticket-card--small {
+        height: 110px;
+        max-height: none;
+    }
+
+    .pl-ticket-card--big .pl-ticket-card__title {
+        font-size: 42px;
+    }
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+    .pl-ticket-hero,
+    .pl-ticket-hero__side {
+        grid-template-columns: 1fr;
+    }
+
+    .pl-ticket-card--big,
+    .pl-ticket-card--small {
+        height: 170px;
+        min-height: 170px;
+        max-height: none;
+    }
+
+    .pl-ticket-card--big .pl-ticket-card__title,
+    .pl-ticket-card--sale .pl-ticket-card__title {
+        font-size: 34px;
+    }
+
+    .pl-ticket-card--newsletter .pl-ticket-card__title strong {
+        font-size: 44px;
+    }
+
+    .pl-ticket-card__content {
+        padding: 18px;
+    }
+
+    .pl-ticket-card__footer-line {
+        bottom: 60px;
+    }
+}
+
+/* Marker für F12-Prüfung */
+html {
+    --pl-ticket-hero-plugin: 1;
+}
+
 </style>

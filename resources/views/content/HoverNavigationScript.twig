@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.16";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.16");
-    console.info("[PreisLandoHoverNavigation] v1.4.16 geladen");
+    window.PreisLandoHoverVersion = "1.4.17.7";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.17.7");
+    console.info("[PreisLandoHoverNavigation] v1.4.17.7 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -1055,6 +1055,242 @@
         });
 
         initializeAutocompletePrices();
+    })();
+
+    /* =====================================================
+       PREISLANDO WARENKORB-STYLING v1.4.17.6
+       Klassen werden anhand der tatsächlich sichtbaren Texte gesetzt.
+       Dadurch bleibt das Styling unabhängig von Plenty-internen
+       Basket-Klassennamen.
+       ===================================================== */
+    (function setupPreisLandoCartStyling() {
+        let applyTimer = null;
+
+        function normalizeText(element) {
+            return element && element.textContent
+                ? element.textContent.trim().toUpperCase()
+                : "";
+        }
+
+        function findLeafText(text) {
+            return Array.from(document.querySelectorAll("*")).find(function (element) {
+                return element.children.length === 0 &&
+                    element.textContent &&
+                    element.textContent.trim() === text;
+            }) || null;
+        }
+
+        function commonAncestor(a, b) {
+            if (!a || !b) return null;
+
+            const parents = [];
+            let current = a;
+
+            while (current) {
+                parents.push(current);
+                current = current.parentElement;
+            }
+
+            current = b;
+
+            while (current) {
+                if (parents.indexOf(current) !== -1) return current;
+                current = current.parentElement;
+            }
+
+            return null;
+        }
+
+        function applyCartStyling() {
+            const cartTitle = Array.from(
+                document.querySelectorAll("h1,h2,h3,h4")
+            ).find(function (element) {
+                return normalizeText(element) === "WARENKORB";
+            });
+
+            if (cartTitle) {
+                cartTitle.classList.add("pl-cart-title");
+
+                let bar = cartTitle.parentElement;
+                while (bar && bar !== document.body) {
+                    const bg = window.getComputedStyle(bar).backgroundColor;
+                    if (
+                        bg &&
+                        bg !== "rgba(0, 0, 0, 0)" &&
+                        bg !== "transparent"
+                    ) {
+                        break;
+                    }
+                    bar = bar.parentElement;
+                }
+
+                if (bar && bar !== document.body) {
+                    bar.classList.add("pl-cart-title-bar");
+                }
+            }
+
+            Array.from(document.querySelectorAll("a,button")).forEach(function (element) {
+                if (normalizeText(element) === "KASSE") {
+                    element.classList.add("pl-cart-checkout-button");
+                }
+            });
+
+            const land = findLeafText("Lieferland");
+            const summe = findLeafText("Summe");
+            const lowerPanel = commonAncestor(land, summe);
+
+            if (lowerPanel && lowerPanel !== document.body) {
+                lowerPanel.classList.add("pl-cart-lower-panel");
+            }
+        }
+
+        function scheduleApply() {
+            clearTimeout(applyTimer);
+            applyTimer = setTimeout(applyCartStyling, 50);
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", applyCartStyling);
+        } else {
+            applyCartStyling();
+        }
+
+        const observer = new MutationObserver(scheduleApply);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    })();
+
+    /* =====================================================
+       PREISLANDO WARENKORB + ARTIKELDETAIL v1.4.17.7
+       Bestätigter F12-Test:
+       - Warenkorb-Unterteil weiß
+       - Artikeldetail-Hauptbereich weiß
+       - Weitere Details per CSS (PreisLandoStyle.twig)
+       ===================================================== */
+    (function setupPreisLandoProductAndCartPanels() {
+        let timer = null;
+
+        function exactText(text) {
+            const hits = Array.from(document.querySelectorAll("body *"))
+                .filter(function (el) {
+                    return el.textContent && el.textContent.trim() === text;
+                })
+                .sort(function (a, b) {
+                    return a.getBoundingClientRect().width - b.getBoundingClientRect().width;
+                });
+
+            return hits[0] || null;
+        }
+
+        function commonParent(a, b) {
+            if (!a || !b) return null;
+
+            const parents = [];
+            let x = a;
+
+            while (x) {
+                parents.push(x);
+                x = x.parentElement;
+            }
+
+            x = b;
+
+            while (x) {
+                if (parents.indexOf(x) !== -1) return x;
+                x = x.parentElement;
+            }
+
+            return null;
+        }
+
+        function applyPanels() {
+            /* -------------------------------------------------
+               Warenkorb: Lieferland + Summe gemeinsamer Weißblock
+               ------------------------------------------------- */
+            const land = exactText("Lieferland");
+            const summe = exactText("Summe");
+
+            let lower = commonParent(land, summe);
+
+            if (lower) {
+                while (
+                    lower.parentElement &&
+                    lower.parentElement !== document.body &&
+                    lower.getBoundingClientRect().width < 600
+                ) {
+                    lower = lower.parentElement;
+                }
+
+                if (lower && lower !== document.body) {
+                    lower.classList.add("pl-cart-lower-panel-v2");
+                }
+            }
+
+            /* -------------------------------------------------
+               Artikeldetail: Produktbild + Kaufbox als Weißblock
+               ------------------------------------------------- */
+            const cartButton = Array.from(document.querySelectorAll("a,button"))
+                .find(function (el) {
+                    return el.textContent &&
+                        el.textContent.trim().toUpperCase().includes("IN DEN WARENKORB");
+                });
+
+            if (cartButton) {
+                const imgs = Array.from(document.querySelectorAll("img"))
+                    .filter(function (img) {
+                        const r = img.getBoundingClientRect();
+                        return (
+                            r.width > 150 &&
+                            r.height > 150 &&
+                            r.top > 50 &&
+                            r.top < window.innerHeight
+                        );
+                    })
+                    .sort(function (a, b) {
+                        const ra = a.getBoundingClientRect();
+                        const rb = b.getBoundingClientRect();
+                        return (rb.width * rb.height) - (ra.width * ra.height);
+                    });
+
+                const mainImage = imgs[0];
+                let productBox = commonParent(mainImage, cartButton);
+
+                if (productBox) {
+                    while (
+                        productBox.parentElement &&
+                        productBox.parentElement !== document.body &&
+                        productBox.getBoundingClientRect().width < 650
+                    ) {
+                        productBox = productBox.parentElement;
+                    }
+
+                    if (productBox && productBox !== document.body) {
+                        productBox.classList.add("pl-product-main-box");
+                    }
+                }
+            }
+        }
+
+        function schedule() {
+            clearTimeout(timer);
+            timer = setTimeout(applyPanels, 60);
+        }
+
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", applyPanels);
+        } else {
+            applyPanels();
+        }
+
+        const observer = new MutationObserver(schedule);
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        window.addEventListener("resize", schedule);
     })();
 })();
 </script>

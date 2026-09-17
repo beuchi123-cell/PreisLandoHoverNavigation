@@ -2,9 +2,9 @@
   "name": "PreisLandoHoverNavigation",
   "namespace": "PreisLandoHoverNavigation",
   "type": "theme",
-  "version": "1.4.17.7.1",
+  "version": "1.4.17.8",
   "license": "MIT",
-  "description": "PreisLando Navigation + zentrales Shop-/Startseiten-CSS; Suchoverlay; Produktkarten; Warenkorb weiß; Artikeldetail weiß",
+  "description": "PreisLando Navigation + zentrales Shop-CSS; Suchoverlay; Produktkarten; Warenkorb; Artikeldetail; Kontaktseite",
   "author": "PreisLando",
   "keywords": [
     "plentyShop LTS",

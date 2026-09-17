@@ -3947,4 +3947,298 @@ html {
     --pl-product-details-plugin: 1;
 }
 
+
+
+/* =========================================================
+   v1.4.17.8 – KONTAKTSEITE
+   Bestätigter F12-Stand: Kopfbereich + Plenty-Kontaktformular
+   ========================================================= */
+
+/* Kontakt-Kopf */
+.pl-contact-head-widget,
+.pl-contact-head {
+    width: 100% !important;
+    background: #fff !important;
+    background-color: #fff !important;
+    padding: 28px 30px !important;
+    margin: 0 0 18px 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
+}
+
+.pl-contact-badge {
+    display: inline-block !important;
+    margin: 0 0 10px 0 !important;
+    padding: 5px 10px !important;
+    background: #51c817 !important;
+    color: #fff !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+    font-weight: 700 !important;
+    letter-spacing: .08em !important;
+    text-transform: uppercase !important;
+}
+
+.pl-contact-title {
+    margin: 0 0 10px 0 !important;
+    padding: 0 !important;
+    color: #222 !important;
+    font-size: 30px !important;
+    line-height: 1.2 !important;
+    font-weight: 700 !important;
+}
+
+.pl-contact-lead {
+    margin: 0 0 12px 0 !important;
+    color: #222 !important;
+    font-size: 18px !important;
+    line-height: 1.45 !important;
+    font-weight: 600 !important;
+}
+
+.pl-contact-text {
+    margin: 0 0 22px 0 !important;
+    color: #444 !important;
+    font-size: 15px !important;
+    line-height: 1.7 !important;
+}
+
+.pl-contact-info {
+    margin: 0 !important;
+    padding: 16px 18px !important;
+    background: #f7f7f7 !important;
+    border-left: 4px solid #51c817 !important;
+    border-radius: 0 5px 5px 0 !important;
+    color: #333 !important;
+    font-size: 14px !important;
+    line-height: 1.7 !important;
+}
+
+.pl-contact-info strong {
+    color: #222 !important;
+    font-weight: 700 !important;
+}
+
+.pl-contact-info a {
+    color: #3da10d !important;
+    text-decoration: none !important;
+    font-weight: 600 !important;
+}
+
+/* Plenty-Kontaktformular */
+form[data-form-type="contact"] {
+    background: #fff !important;
+    padding: 28px 30px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
+}
+
+form[data-form-type="contact"] .widget-grid.widget-two-col {
+    margin-left: -7px !important;
+    margin-right: -7px !important;
+}
+
+form[data-form-type="contact"] .widget-grid.widget-two-col > .widget-inner {
+    padding-left: 7px !important;
+    padding-right: 7px !important;
+}
+
+/* Eingabefelder */
+form[data-form-type="contact"] .input-unit:not(.file-input) {
+    position: relative !important;
+    display: block !important;
+    width: 100% !important;
+    margin: 0 0 15px 0 !important;
+    padding: 0 !important;
+    background: transparent !important;
+    overflow: visible !important;
+}
+
+form[data-form-type="contact"] .input-unit:not(.file-input) input,
+form[data-form-type="contact"] .input-unit:not(.file-input) select,
+form[data-form-type="contact"] .input-unit:not(.file-input) textarea {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+    max-width: none !important;
+    background: #fff !important;
+    color: #222 !important;
+    border: 1px solid #d5d5d5 !important;
+    border-radius: 5px !important;
+    box-shadow: none !important;
+    box-sizing: border-box !important;
+}
+
+form[data-form-type="contact"] .input-unit:not(.file-input) input,
+form[data-form-type="contact"] .input-unit:not(.file-input) select {
+    height: 50px !important;
+    min-height: 50px !important;
+    padding: 19px 12px 6px 12px !important;
+}
+
+form[data-form-type="contact"] .input-unit.textarea textarea {
+    min-height: 180px !important;
+    padding: 22px 12px 10px 12px !important;
+    resize: vertical !important;
+}
+
+form[data-form-type="contact"] .input-unit:not(.file-input) > label {
+    position: absolute !important;
+    top: 5px !important;
+    left: 12px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #6c757d !important;
+    background: transparent !important;
+    font-size: 10px !important;
+    line-height: 13px !important;
+    font-weight: 600 !important;
+    pointer-events: none !important;
+    z-index: 2 !important;
+}
+
+form[data-form-type="contact"] .input-unit:not(.file-input) input:focus,
+form[data-form-type="contact"] .input-unit:not(.file-input) select:focus,
+form[data-form-type="contact"] .input-unit:not(.file-input) textarea:focus {
+    border-color: #51c817 !important;
+    outline: 0 !important;
+    box-shadow: 0 0 0 2px rgba(81,200,23,.13) !important;
+}
+
+/* Dateianhang */
+form[data-form-type="contact"] .widget-mail-attachment {
+    margin-bottom: 15px !important;
+}
+
+form[data-form-type="contact"] .file-input {
+    display: flex !important;
+    position: relative !important;
+    min-height: 50px !important;
+    width: 100% !important;
+    background: #fff !important;
+    border: 1px solid #d5d5d5 !important;
+    border-radius: 5px !important;
+    box-sizing: border-box !important;
+}
+
+form[data-form-type="contact"] .file-input > label {
+    position: absolute !important;
+    top: 5px !important;
+    left: 12px !important;
+    color: #6c757d !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+}
+
+form[data-form-type="contact"] .input-unit-preview {
+    flex: 1 !important;
+    padding: 21px 12px 6px 12px !important;
+}
+
+form[data-form-type="contact"] .input-unit-btn {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 50px !important;
+    background: #f1f1f1 !important;
+    color: #333 !important;
+    border-left: 1px solid #d5d5d5 !important;
+    border-radius: 0 5px 5px 0 !important;
+}
+
+/* Pflichtfeld-Hinweis */
+form[data-form-type="contact"] .widget-text .widget-inner {
+    background: transparent !important;
+    padding: 5px 0 10px 0 !important;
+}
+
+form[data-form-type="contact"] .widget-text p {
+    margin: 0 !important;
+    color: #666 !important;
+    font-size: 13px !important;
+}
+
+/* Datenschutz */
+form[data-form-type="contact"] .widget-accept-privacy-policy {
+    margin: 6px 0 20px 0 !important;
+}
+
+form[data-form-type="contact"] .form-check {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 8px !important;
+}
+
+form[data-form-type="contact"] .privacy-policy-input {
+    width: 16px !important;
+    height: 16px !important;
+    min-height: 16px !important;
+    margin: 3px 0 0 0 !important;
+    accent-color: #51c817 !important;
+}
+
+form[data-form-type="contact"] .form-check-label {
+    color: #444 !important;
+    font-size: 13px !important;
+    line-height: 1.5 !important;
+}
+
+form[data-form-type="contact"] .form-check-label a {
+    color: #3da10d !important;
+}
+
+/* Senden */
+form[data-form-type="contact"] .btn-send-contact-form {
+    min-height: 44px !important;
+    padding: 10px 20px !important;
+    background: #51c817 !important;
+    background-color: #51c817 !important;
+    border: 1px solid #51c817 !important;
+    border-radius: 5px !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+}
+
+form[data-form-type="contact"] .btn-send-contact-form:hover,
+form[data-form-type="contact"] .btn-send-contact-form:focus {
+    background: #43aa11 !important;
+    background-color: #43aa11 !important;
+    border-color: #43aa11 !important;
+}
+
+/* Mobil */
+@media (max-width: 767px) {
+    .pl-contact-head-widget,
+    .pl-contact-head,
+    form[data-form-type="contact"] {
+        padding: 20px 16px !important;
+    }
+
+    .pl-contact-title {
+        font-size: 25px !important;
+    }
+
+    .pl-contact-lead {
+        font-size: 17px !important;
+    }
+
+    form[data-form-type="contact"] .widget-grid.widget-two-col {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+    }
+
+    form[data-form-type="contact"] .widget-grid.widget-two-col > .widget-inner {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+}
+
+/* Marker */
+html {
+    --pl-contact-plugin: 1;
+}
+
 </style>

@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.21.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.21.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.21.0 geladen");
+    window.PreisLandoHoverVersion = "1.4.22.0";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.22.0");
+    console.info("[PreisLandoHoverNavigation] v1.4.22.0 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -1124,10 +1124,18 @@
         });
     }
 
+    function safeStart() {
+        try {
+            start();
+        } catch (error) {
+            console.error("[PreisLandoHoverNavigation] Navigation konnte nicht initialisiert werden:", error);
+        }
+    }
+
     if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", start);
+        document.addEventListener("DOMContentLoaded", safeStart);
     } else {
-        start();
+        safeStart();
     }
 
     /* =====================================================
@@ -1493,7 +1501,7 @@
 
         let settings = Object.assign({}, DEFAULTS);
         let lastFocusedElement = null;
-        const fontBaselines = new WeakMap();
+        const fontBaselines = new Map();
         const fontTouched = new Set();
 
         function getFontScale() {
@@ -1782,13 +1790,25 @@
             applySettings();
         }
 
-        readSettings();
-        applySettings();
+        try {
+            readSettings();
+            applySettings();
 
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", buildRoot, { once: true });
-        } else {
-            buildRoot();
+            if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", function () {
+                    try {
+                        buildRoot();
+                    } catch (error) {
+                        console.error("[PreisLandoHoverNavigation] Barrierefreiheit konnte nicht aufgebaut werden:", error);
+                    }
+                }, { once: true });
+            } else {
+                buildRoot();
+            }
+        } catch (error) {
+            /* Wichtig: Ein Fehler in der Bedienhilfe darf weder Navigation
+               noch Schach-Easter-Egg blockieren. */
+            console.error("[PreisLandoHoverNavigation] Barrierefreiheit konnte nicht initialisiert werden:", error);
         }
     })();
 

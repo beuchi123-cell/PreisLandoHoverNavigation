@@ -2,9 +2,9 @@
   "name": "PreisLandoHoverNavigation",
   "namespace": "PreisLandoHoverNavigation",
   "type": "theme",
-  "version": "1.4.21.0",
+  "version": "1.4.22.0",
   "license": "MIT",
-  "description": "PreisLando Navigation + zentrales Shop-CSS; Suchoverlay; Produktkarten; Warenkorb; Artikeldetail; Kontaktseite; Footer; Barrierefreiheits-Werkzeuge; Schach-Easter-Egg; globale Header-Klassen auf allen Seitentypen; Barrierefreiheitsmenü rechts/viewport-sicher; Schriftvergrößerung; gleichmäßiges Schachbrett",
+  "description": "PreisLando Navigation + Shop-CSS; globale Header-Klassen; Barrierefreiheits-Werkzeuge rechts; Schach-Easter-Egg; Fix fuer Schriftgroesse und ausfallsichere Initialisierung",
   "author": "PreisLando",
   "keywords": [
     "plentyShop LTS",

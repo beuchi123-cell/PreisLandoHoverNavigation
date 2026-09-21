@@ -1,7 +1,7 @@
 <style>
 /* =========================================================
    PREISLANDO – ZENTRALES PLUGIN-CSS
-   Plugin 1.4.20.0 ALLCSS
+   Plugin 1.4.21.0 ALLCSS
    ShopBuilder-Custom-CSS kann nach erfolgreichem Test geleert werden.
    ========================================================= */
 
@@ -4545,16 +4545,13 @@ html {
    ========================================================= */
 
 /* Einstellungen auf der Seite */
-html[data-pl-a11y-font="normal"] {
-    font-size: 100% !important;
-}
-
-html[data-pl-a11y-font="large"] {
-    font-size: 112.5% !important;
-}
-
+/* Die sichtbare Schriftvergrößerung wird per JavaScript auf echte
+   Textelemente angewendet. Das funktioniert auch bei Shop-CSS, das
+   Schriftgrößen fest in px und mit !important vorgibt. */
+html[data-pl-a11y-font="normal"],
+html[data-pl-a11y-font="large"],
 html[data-pl-a11y-font="xlarge"] {
-    font-size: 125% !important;
+    --pl-a11y-font-mode: 1;
 }
 
 html[data-pl-a11y-grayscale="on"] body {
@@ -4595,7 +4592,8 @@ body :focus-visible {
 /* Schwebender Button */
 .pl-a11y {
     position: fixed;
-    left: 18px;
+    right: 18px;
+    left: auto;
     bottom: 18px;
     z-index: 2147483005;
     font-family: Arial, Helvetica, sans-serif;
@@ -4643,11 +4641,13 @@ body :focus-visible {
 }
 
 .pl-a11y__panel {
-    position: absolute;
-    left: 0;
-    bottom: 60px;
+    position: fixed;
+    right: 18px;
+    left: auto;
+    top: auto;
+    bottom: 78px;
     width: min(360px, calc(100vw - 36px));
-    max-height: min(650px, calc(100vh - 100px));
+    max-height: min(650px, calc(100dvh - 100px));
     overflow: auto;
     border: 1px solid #d8d8d8;
     border-radius: 14px;
@@ -4809,7 +4809,8 @@ body :focus-visible {
 
 @media (max-width: 767px) {
     .pl-a11y {
-        left: 10px;
+        right: 10px;
+        left: auto;
         bottom: 10px;
     }
 
@@ -4837,6 +4838,7 @@ body :focus-visible {
         position: fixed;
         left: 10px;
         right: 10px;
+        top: auto;
         bottom: 68px;
         width: auto;
         max-height: calc(100dvh - 86px);
@@ -4851,6 +4853,14 @@ body :focus-visible {
         animation: none !important;
     }
 }
+
+/* v1.4.21: Menü bleibt immer vollständig im sichtbaren Viewport und
+   öffnet sich vom Button aus nach oben. */
+.pl-a11y.is-open .pl-a11y__panel {
+    right: max(10px, env(safe-area-inset-right));
+    bottom: max(78px, calc(env(safe-area-inset-bottom) + 68px));
+}
+
 
 /* =========================================================
    PREISLANDO SCHACH-EASTER-EGG v1.4.19.0
@@ -5004,7 +5014,8 @@ html.pl-chess-open body {
 
 .pl-chess__board {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    grid-template-rows: repeat(8, minmax(0, 1fr));
     width: min(100%, 610px);
     aspect-ratio: 1 / 1;
     margin: 0 auto;
@@ -5019,6 +5030,8 @@ html.pl-chess-open body {
     position: relative;
     display: grid;
     place-items: center;
+    width: 100%;
+    height: 100%;
     min-width: 0;
     min-height: 0;
     padding: 0;

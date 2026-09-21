@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.20.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.20.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.20.0 geladen");
+    window.PreisLandoHoverVersion = "1.4.21.0";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.21.0");
+    console.info("[PreisLandoHoverNavigation] v1.4.21.0 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -1493,6 +1493,58 @@
 
         let settings = Object.assign({}, DEFAULTS);
         let lastFocusedElement = null;
+        const fontBaselines = new WeakMap();
+        const fontTouched = new Set();
+
+        function getFontScale() {
+            if (settings.font === "large") return 1.125;
+            if (settings.font === "xlarge") return 1.25;
+            return 1;
+        }
+
+        function hasOwnVisibleText(element) {
+            if (!element || element.nodeType !== 1) return false;
+            if (element.closest && (element.closest(".pl-a11y") || element.closest(".pl-chess"))) return false;
+            if (["SCRIPT", "STYLE", "NOSCRIPT", "SVG", "PATH", "IMG", "VIDEO", "AUDIO", "CANVAS"].indexOf(element.tagName) !== -1) return false;
+            if (["INPUT", "SELECT", "TEXTAREA", "BUTTON"].indexOf(element.tagName) !== -1) return true;
+            return Array.prototype.some.call(element.childNodes || [], function (node) {
+                return node.nodeType === 3 && /\S/.test(node.nodeValue || "");
+            });
+        }
+
+        function restoreFontScale() {
+            fontTouched.forEach(function (element) {
+                const baseline = fontBaselines.get(element);
+                if (!baseline || !element || !element.style) return;
+                if (baseline.inlineValue) {
+                    element.style.setProperty("font-size", baseline.inlineValue, baseline.inlinePriority || "");
+                } else {
+                    element.style.removeProperty("font-size");
+                }
+            });
+            fontTouched.clear();
+            fontBaselines.clear();
+        }
+
+        function applyFontScale() {
+            const scale = getFontScale();
+            restoreFontScale();
+            if (scale === 1 || !document.body) return;
+
+            document.body.querySelectorAll("*").forEach(function (element) {
+                if (!hasOwnVisibleText(element)) return;
+                const computed = window.getComputedStyle(element);
+                const size = parseFloat(computed.fontSize || "");
+                if (!Number.isFinite(size) || size <= 0) return;
+
+                fontBaselines.set(element, {
+                    inlineValue: element.style.getPropertyValue("font-size"),
+                    inlinePriority: element.style.getPropertyPriority("font-size")
+                });
+                fontTouched.add(element);
+                element.style.setProperty("font-size", (size * scale).toFixed(2) + "px", "important");
+            });
+        }
 
         function readSettings() {
             try {
@@ -1525,6 +1577,7 @@
             HTML.setAttribute("data-pl-a11y-grayscale", settings.grayscale ? "on" : "off");
             HTML.setAttribute("data-pl-a11y-links", settings.links ? "on" : "off");
             HTML.setAttribute("data-pl-a11y-motion", settings.motion ? "reduced" : "normal");
+            applyFontScale();
             updateControls();
         }
 
@@ -1659,6 +1712,7 @@
             root.appendChild(trigger);
             root.appendChild(panel);
             document.body.appendChild(root);
+            applyFontScale();
 
             function openPanel() {
                 lastFocusedElement = document.activeElement;

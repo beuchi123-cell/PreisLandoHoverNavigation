@@ -17,12 +17,10 @@
     const HOVER_OPEN_DELAY = 120;
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
-    const ROOT_CACHE_KEY = "preislandoRootCategoriesV1";
-    const ROOT_CACHE_TTL = 15 * 60 * 1000;
-
-    window.PreisLandoHoverVersion = "1.4.25.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.25.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.25.0 geladen");
+    
+    window.PreisLandoHoverVersion = "1.4.26.0";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.26.0");
+    console.info("[PreisLandoHoverNavigation] v1.4.26.0 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -139,31 +137,51 @@
     }
 
     function loadRootCategories() {
+        /* v1.4.26: Kein Session-Cache fuer leere/fehlgeschlagene Antworten.
+           Genau so konnte vorher ein einziger zu frueher API-Aufruf die
+           Navigation fuer den Rest der Sitzung leer halten. */
+        if (Array.isArray(childCache[ROOT_CATEGORY_ID]) && childCache[ROOT_CATEGORY_ID].length) {
+            return Promise.resolve(childCache[ROOT_CATEGORY_ID]);
+        }
         if (rootCategoriesPromise) return rootCategoriesPromise;
 
-        /* Die Hauptnavigation aendert sich selten. Ein kurzer Session-Cache
-           verhindert, dass nach jedem Voll-Reload zuerst das alte Plenty-Menue
-           sichtbar ist, waehrend die Kategorie-API noch antwortet. */
-        try {
-            const raw = sessionStorage.getItem(ROOT_CACHE_KEY);
-            if (raw) {
-                const cached = JSON.parse(raw);
-                if (cached && Array.isArray(cached.data) &&
-                    Date.now() - Number(cached.ts || 0) < ROOT_CACHE_TTL) {
-                    childCache[ROOT_CATEGORY_ID] = cached.data;
-                    rootCategoriesPromise = Promise.resolve(cached.data);
-                    return rootCategoriesPromise;
-                }
-            }
-        } catch (error) {}
+        const retryDelays = [0, 180, 500, 1100, 2200];
 
-        rootCategoriesPromise = loadCategoryChildren(ROOT_CATEGORY_ID).then(function (categories) {
-            try {
-                sessionStorage.setItem(ROOT_CACHE_KEY, JSON.stringify({
-                    ts: Date.now(),
-                    data: categories
-                }));
-            } catch (error) {}
+        function attempt(index) {
+            const delay = retryDelays[index] || 0;
+            const wait = delay > 0
+                ? new Promise(function (resolve) { window.setTimeout(resolve, delay); })
+                : Promise.resolve();
+
+            return wait.then(function () {
+                return fetchCategoryChildren(ROOT_CATEGORY_ID);
+            }).then(function (categories) {
+                if (Array.isArray(categories) && categories.length) {
+                    childCache[ROOT_CATEGORY_ID] = categories;
+                    return categories;
+                }
+
+                if (index + 1 < retryDelays.length) {
+                    return attempt(index + 1);
+                }
+
+                console.warn("PreisLando HoverNavigation: Root-Kategorien sind noch leer; spaeterer Neuversuch folgt.");
+                return [];
+            }).catch(function (error) {
+                if (index + 1 < retryDelays.length) {
+                    return attempt(index + 1);
+                }
+                console.error("PreisLando HoverNavigation: Root-Kategorien konnten nicht geladen werden.", error);
+                return [];
+            });
+        }
+
+        rootCategoriesPromise = attempt(0).then(function (categories) {
+            if (!categories.length) {
+                /* Wichtig: leeres Ergebnis NICHT festhalten. Der Mutation-/Route-
+                   Observer darf beim naechsten Durchlauf erneut anfragen. */
+                rootCategoriesPromise = null;
+            }
             return categories;
         });
 
@@ -1126,7 +1144,7 @@
     }
 
     /* =====================================================
-       v1.4.25 – EINZIGE HEADER-ANORDNUNG
+       v1.4.26 – EINZIGE HEADER-ANORDNUNG
 
        Diese Logik ersetzt das fruehere CustomJS im Plugin
        "Custom CSS/JS im Frontend". Sie wird bei echten Reloads
@@ -1240,9 +1258,20 @@
         if (!rootLink) return;
 
         loadRootCategories().then(function (categories) {
-            const topList = buildPromotedNavigation(rootLink, categories);
-            if (!topList) return;
+            if (!Array.isArray(categories) || !categories.length) {
+                document.documentElement.classList.remove("preis-lando-nav-ready");
+                window.setTimeout(scheduleInitialize, 900);
+                return;
+            }
 
+            const topList = buildPromotedNavigation(rootLink, categories);
+            if (!topList) {
+                document.documentElement.classList.remove("preis-lando-nav-ready");
+                window.setTimeout(scheduleInitialize, 500);
+                return;
+            }
+
+            document.documentElement.classList.add("preis-lando-nav-ready");
             buildMobileDrawer(categories);
             ensureMobileMenuButton();
 

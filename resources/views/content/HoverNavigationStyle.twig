@@ -1,12 +1,40 @@
 <style>
 /* =========================================================
    PREISLANDO – ZENTRALES PLUGIN-CSS
-   Plugin 1.4.26.0 ROBUST INIT
+   Plugin 1.4.27.0 NO-FLASH / HEADER-SCOPE
    ShopBuilder-Custom-CSS kann nach erfolgreichem Test geleert werden.
    ========================================================= */
 
 
-/* v1.4.26: Alte Plenty-Navigation erst nach erfolgreichem JS-Aufbau ausblenden. */
+
+/* =========================================================
+   v1.4.27 – CRITICAL NO-FLASH
+   Die originale Root-Kategorie wird bereits durch CSS unsichtbar,
+   bevor das JavaScript die 10 PreisLando-Kategorien aufgebaut hat.
+   Dadurch blitzt "Neuetischkultur SW5" nicht mehr kurz auf.
+   :has() versteckt nur das Root-LI im HEADER, nie den Kategoriebaum
+   im Seiteninhalt. Fallback blendet zumindest den Root-Link aus.
+   ========================================================= */
+html:not(.preis-lando-nav-ready) #page-header-parent li:has(> a[href$="/neuetischkultur-sw5"]),
+html:not(.preis-lando-nav-ready) #page-header-parent li:has(> a[href$="/neuetischkultur-sw5/"]),
+html:not(.preis-lando-nav-ready) #page-header li:has(> a[href$="/neuetischkultur-sw5"]),
+html:not(.preis-lando-nav-ready) #page-header li:has(> a[href$="/neuetischkultur-sw5/"]),
+html:not(.preis-lando-nav-ready) .header-container li:has(> a[href$="/neuetischkultur-sw5"]),
+html:not(.preis-lando-nav-ready) .header-container li:has(> a[href$="/neuetischkultur-sw5/"]) {
+    visibility: hidden !important;
+}
+
+html:not(.preis-lando-nav-ready) #page-header-parent a[href$="/neuetischkultur-sw5"],
+html:not(.preis-lando-nav-ready) #page-header-parent a[href$="/neuetischkultur-sw5/"],
+html:not(.preis-lando-nav-ready) #page-header a[href$="/neuetischkultur-sw5"],
+html:not(.preis-lando-nav-ready) #page-header a[href$="/neuetischkultur-sw5/"],
+html:not(.preis-lando-nav-ready) .header-container a[href$="/neuetischkultur-sw5"],
+html:not(.preis-lando-nav-ready) .header-container a[href$="/neuetischkultur-sw5/"] {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+
+/* v1.4.27: Alte Plenty-Navigation erst nach erfolgreichem JS-Aufbau endgültig ausblenden. */
 
 /* =========================================================
    PREISLANDO GRID-NAVIGATION + GEMEINSAMES HOVER-FELD

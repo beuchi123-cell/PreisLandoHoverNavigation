@@ -18,9 +18,9 @@
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
 
-    window.PreisLandoHoverVersion = "1.4.23.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.23.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.23.0 geladen");
+    window.PreisLandoHoverVersion = "1.4.24.0";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.24.0");
+    console.info("[PreisLandoHoverNavigation] v1.4.24.0 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -248,18 +248,24 @@
 
     function findRootLink() {
         const preferred = document.querySelector(".preis-lando-navigation");
-        const scope = preferred || document;
 
-        const links = Array.from(scope.querySelectorAll("li.ddown > a, a"));
+        function findIn(scope) {
+            if (!scope || !scope.querySelectorAll) return null;
+            const links = Array.from(scope.querySelectorAll("li.ddown > a, a"));
+            return links.find(function (link) {
+                const path = normalizePath(link.getAttribute("href") || link.href);
+                const text = (link.textContent || "").trim().toLowerCase();
 
-        return links.find(function (link) {
-            const path = normalizePath(link.getAttribute("href") || link.href);
-            const text = (link.textContent || "").trim().toLowerCase();
+                return path === ROOT_CATEGORY_PATH ||
+                    path.endsWith(ROOT_CATEGORY_PATH) ||
+                    text === ROOT_CATEGORY_NAME;
+            }) || null;
+        }
 
-            return path === ROOT_CATEGORY_PATH ||
-                path.endsWith(ROOT_CATEGORY_PATH) ||
-                text === ROOT_CATEGORY_NAME;
-        }) || null;
+        /* Bei plentyShop-Seitenwechseln kann die bereits markierte Navigation
+           kurzzeitig noch auf die alte DOM-Huelle zeigen. Deshalb bei einem
+           Trefferfehler immer noch einmal im gesamten Dokument suchen. */
+        return findIn(preferred) || findIn(document);
     }
 
     function findTopList(rootLink) {
@@ -307,7 +313,20 @@
         rootLi.classList.add("preis-lando-original-root");
 
         if (topList.dataset.preisLandoPromoted === "1") {
-            return topList;
+            const generated = getGeneratedBoxes(topList);
+            if (generated.length === categories.length && generated.length > 0) {
+                return topList;
+            }
+
+            /* plentyShop kann beim internen Seitenwechsel die UL-Huelle
+               behalten, aber deren Kinder neu rendern. Dann darf das alte
+               data-Flag den Neuaufbau nicht blockieren. */
+            generated.forEach(function (entry) { entry.remove(); });
+            const staleMenu = getSharedMenu(topList);
+            if (staleMenu) staleMenu.remove();
+            delete topList.dataset.preisLandoPromoted;
+            delete topList.dataset.preisLandoHoverBoundary;
+            delete topList.dataset.preisLandoPreloadStarted;
         }
 
         categories.forEach(function (category) {
@@ -845,12 +864,29 @@
 
     function ensureMobileMenuButton() {
         let button = document.querySelector(".kategorie-mobile-button");
-        const topBar = document.querySelector(".preis-lando-topbar");
-        const host = topBar && (
+        let topBar = document.querySelector(".preis-lando-topbar") || findTopBarHost(getHeaderScope());
+
+        if (topBar && !topBar.classList.contains("preis-lando-topbar")) {
+            topBar.classList.add("preis-lando-topbar", "preis-lando-auto-topbar");
+        }
+
+        let host = topBar && (
             topBar.querySelector(".top-bar-items") ||
             topBar.querySelector(":scope > .widget-inner") ||
             topBar
         );
+
+        /* Letzter Fallback fuer Unterseiten: plentyShop rendert die Top-Bar
+           dort teilweise in einer anderen Huelle. */
+        if (!host) {
+            host = document.querySelector("#page-header-parent .top-bar-items, #page-header .top-bar-items, .top-bar-items");
+            if (host) {
+                topBar = host.parentElement || host;
+                if (!topBar.classList.contains("preis-lando-topbar")) {
+                    topBar.classList.add("preis-lando-topbar", "preis-lando-auto-topbar");
+                }
+            }
+        }
 
         if (!button && host) {
             button = document.createElement("button");
@@ -966,15 +1002,18 @@
 
         if (!scope || !scope.querySelector) return null;
 
-        const topItems = scope.querySelector(".top-bar-items");
+        const topItems = scope.querySelector(".top-bar-items") ||
+            document.querySelector("#page-header-parent .top-bar-items, #page-header .top-bar-items, .top-bar-items");
         if (topItems) {
             /* Klasse absichtlich auf eine Hülle setzen, damit bestehende
                Selektoren '.preis-lando-topbar .top-bar-items' greifen. */
             return topItems.parentElement || topItems;
         }
 
-        const search = scope.querySelector(".always-visible-search");
-        const controls = scope.querySelector(".controls, .controls-list");
+        const search = scope.querySelector(".always-visible-search") ||
+            document.querySelector("#page-header-parent .always-visible-search, #page-header .always-visible-search, .always-visible-search");
+        const controls = scope.querySelector(".controls, .controls-list") ||
+            document.querySelector("#page-header-parent .controls, #page-header .controls, .controls, .controls-list");
         if (search && controls) {
             const common = commonAncestorElement(search, controls);
             if (common && common !== document.body && common !== document.documentElement) {
@@ -1108,6 +1147,53 @@
             childList: true,
             subtree: true
         });
+
+        /* plentyShop LTS wechselt einige Seiten ohne klassischen Voll-Reload.
+           Mehrere kurze Nachpruefungen sorgen dafuer, dass Navigation und
+           Mobile-Button auch nach einem internen Route-Wechsel sofort wieder
+           aufgebaut werden und kein manuelles Aktualisieren noetig ist. */
+        let lastKnownUrl = window.location.href;
+        function refreshAfterRouteChange() {
+            [0, 80, 220, 500, 1000, 1800].forEach(function (delay) {
+                window.setTimeout(function () {
+                    ensureGlobalPreisLandoHeaderClasses();
+                    ensureMobileMenuButton();
+                    initializeHoverNavigation();
+                }, delay);
+            });
+        }
+
+        window.addEventListener("popstate", refreshAfterRouteChange);
+        window.addEventListener("hashchange", refreshAfterRouteChange);
+        window.addEventListener("pageshow", refreshAfterRouteChange);
+
+        document.addEventListener("click", function (event) {
+            const link = event.target && event.target.closest
+                ? event.target.closest("a[href]")
+                : null;
+            if (!link) return;
+            try {
+                const targetUrl = new URL(link.href, window.location.href);
+                if (targetUrl.origin === window.location.origin) {
+                    window.setTimeout(function () {
+                        if (window.location.href !== lastKnownUrl) {
+                            lastKnownUrl = window.location.href;
+                            refreshAfterRouteChange();
+                        } else {
+                            /* Auch Router, die URL und DOM zeitversetzt aendern. */
+                            refreshAfterRouteChange();
+                        }
+                    }, 60);
+                }
+            } catch (error) {}
+        }, true);
+
+        window.setInterval(function () {
+            if (window.location.href !== lastKnownUrl) {
+                lastKnownUrl = window.location.href;
+                refreshAfterRouteChange();
+            }
+        }, 400);
 
         let resizeTimer = null;
         window.addEventListener("resize", function () {
@@ -1493,6 +1579,62 @@
 
         let settings = Object.assign({}, DEFAULTS);
         let lastFocusedElement = null;
+        let fontScaleTimer = null;
+
+        const FONT_SCALE = {
+            normal: 1,
+            large: 1.25,
+            xlarge: 1.50
+        };
+
+        function restoreScaledFonts() {
+            if (!document.body) return;
+            document.body.querySelectorAll('[data-pl-a11y-scaled="1"]').forEach(function (el) {
+                const original = el.getAttribute("data-pl-a11y-original-font-size");
+                const priority = el.getAttribute("data-pl-a11y-original-font-priority") || "";
+                if (original) el.style.setProperty("font-size", original, priority);
+                else el.style.removeProperty("font-size");
+                el.removeAttribute("data-pl-a11y-scaled");
+                el.removeAttribute("data-pl-a11y-original-font-size");
+                el.removeAttribute("data-pl-a11y-original-font-priority");
+            });
+        }
+
+        function shouldScaleFont(el) {
+            if (!el || !el.matches) return false;
+            if (el.closest("#" + ROOT_ID + ", #pl-chess-easter")) return false;
+            if (el.matches("script, style, svg, path, use, i, .fa, [class*='fa-'], .material-icons, .material-symbols-outlined")) return false;
+            const style = window.getComputedStyle(el);
+            if (style.display === "none" || style.visibility === "hidden") return false;
+            const px = parseFloat(style.fontSize);
+            return Number.isFinite(px) && px >= 8 && px <= 64;
+        }
+
+        function applyFontScale() {
+            if (!document.body) return;
+            restoreScaledFonts();
+
+            const scale = FONT_SCALE[settings.font] || 1;
+            if (scale === 1) return;
+
+            const selector = "p,a,span,li,label,button,input,textarea,select,option,td,th,h1,h2,h3,h4,h5,h6,small,strong,em,div";
+            document.body.querySelectorAll(selector).forEach(function (el) {
+                if (!shouldScaleFont(el)) return;
+
+                const computed = parseFloat(window.getComputedStyle(el).fontSize);
+                if (!Number.isFinite(computed)) return;
+
+                el.setAttribute("data-pl-a11y-original-font-size", el.style.getPropertyValue("font-size") || "");
+                el.setAttribute("data-pl-a11y-original-font-priority", el.style.getPropertyPriority("font-size") || "");
+                el.setAttribute("data-pl-a11y-scaled", "1");
+                el.style.setProperty("font-size", Math.min(72, computed * scale).toFixed(2) + "px", "important");
+            });
+        }
+
+        function scheduleFontScale() {
+            window.clearTimeout(fontScaleTimer);
+            fontScaleTimer = window.setTimeout(applyFontScale, 90);
+        }
 
         function readSettings() {
             try {
@@ -1526,6 +1668,7 @@
             HTML.setAttribute("data-pl-a11y-links", settings.links ? "on" : "off");
             HTML.setAttribute("data-pl-a11y-motion", settings.motion ? "reduced" : "normal");
             updateControls();
+            scheduleFontScale();
         }
 
         function getRoot() {
@@ -1735,6 +1878,18 @@
             document.addEventListener("DOMContentLoaded", buildRoot, { once: true });
         } else {
             buildRoot();
+        }
+
+        /* Neu geladene Kategorie-/Artikelseiten erhalten die gewaehlte
+           Schriftgroesse automatisch, ohne die Navigation zu beeinflussen. */
+        if (document.body) {
+            const fontObserver = new MutationObserver(function (mutations) {
+                if (settings.font === "normal") return;
+                if (mutations.some(function (m) { return m.addedNodes && m.addedNodes.length; })) {
+                    scheduleFontScale();
+                }
+            });
+            fontObserver.observe(document.body, { childList: true, subtree: true });
         }
     })();
 

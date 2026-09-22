@@ -17,10 +17,12 @@
     const HOVER_OPEN_DELAY = 120;
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
+    const ROOT_CACHE_KEY = "preislandoRootCategoriesV1";
+    const ROOT_CACHE_TTL = 15 * 60 * 1000;
 
-    window.PreisLandoHoverVersion = "1.4.24.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.24.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.24.0 geladen");
+    window.PreisLandoHoverVersion = "1.4.25.0";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.25.0");
+    console.info("[PreisLandoHoverNavigation] v1.4.25.0 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -137,9 +139,34 @@
     }
 
     function loadRootCategories() {
-        if (!rootCategoriesPromise) {
-            rootCategoriesPromise = loadCategoryChildren(ROOT_CATEGORY_ID);
-        }
+        if (rootCategoriesPromise) return rootCategoriesPromise;
+
+        /* Die Hauptnavigation aendert sich selten. Ein kurzer Session-Cache
+           verhindert, dass nach jedem Voll-Reload zuerst das alte Plenty-Menue
+           sichtbar ist, waehrend die Kategorie-API noch antwortet. */
+        try {
+            const raw = sessionStorage.getItem(ROOT_CACHE_KEY);
+            if (raw) {
+                const cached = JSON.parse(raw);
+                if (cached && Array.isArray(cached.data) &&
+                    Date.now() - Number(cached.ts || 0) < ROOT_CACHE_TTL) {
+                    childCache[ROOT_CATEGORY_ID] = cached.data;
+                    rootCategoriesPromise = Promise.resolve(cached.data);
+                    return rootCategoriesPromise;
+                }
+            }
+        } catch (error) {}
+
+        rootCategoriesPromise = loadCategoryChildren(ROOT_CATEGORY_ID).then(function (categories) {
+            try {
+                sessionStorage.setItem(ROOT_CACHE_KEY, JSON.stringify({
+                    ts: Date.now(),
+                    data: categories
+                }));
+            } catch (error) {}
+            return categories;
+        });
+
         return rootCategoriesPromise;
     }
 
@@ -1099,11 +1126,116 @@
     }
 
     /* =====================================================
+       v1.4.25 – EINZIGE HEADER-ANORDNUNG
+
+       Diese Logik ersetzt das fruehere CustomJS im Plugin
+       "Custom CSS/JS im Frontend". Sie wird bei echten Reloads
+       UND bei internen plentyShop-Routen erneut ausgefuehrt.
+       ===================================================== */
+
+    const originalHeaderPositions = new WeakMap();
+
+    function rememberHeaderPosition(element) {
+        if (!element || !element.parentNode || originalHeaderPositions.has(element)) return;
+        originalHeaderPositions.set(element, {
+            parent: element.parentNode,
+            next: element.nextSibling
+        });
+    }
+
+    function restoreHeaderPosition(element) {
+        if (!element) return;
+        const saved = originalHeaderPositions.get(element);
+        if (!saved || !saved.parent || !saved.parent.isConnected) return;
+        if (element.parentNode === saved.parent && element.nextSibling === saved.next) return;
+        if (saved.next && saved.next.parentNode === saved.parent) {
+            saved.parent.insertBefore(element, saved.next);
+        } else {
+            saved.parent.appendChild(element);
+        }
+    }
+
+    function syncPreisLandoHeaderLayout() {
+        const scope = getHeaderScope();
+        let topBar = document.querySelector(".preis-lando-topbar") || findTopBarHost(scope);
+        if (!topBar) return;
+
+        if (!topBar.classList.contains("preis-lando-topbar")) {
+            topBar.classList.add("preis-lando-topbar", "preis-lando-auto-topbar");
+        }
+
+        const host = topBar.querySelector(".top-bar-items") ||
+            topBar.querySelector(":scope > .widget-inner") ||
+            topBar;
+
+        const logo = document.querySelector(".preis-lando-logo");
+        const controls = topBar.querySelector(".controls") ||
+            document.querySelector("#page-header-parent .controls, #page-header .controls, .controls");
+        const search = topBar.querySelector(".always-visible-search") ||
+            document.querySelector("#page-header-parent .always-visible-search, #page-header .always-visible-search, .always-visible-search");
+        const button = ensureMobileMenuButton();
+        const mobile = window.innerWidth < HOVER_BREAKPOINT;
+
+        if (mobile) {
+            rememberHeaderPosition(logo);
+            rememberHeaderPosition(search);
+
+            if (button && button.parentNode !== host) {
+                host.insertBefore(button, host.firstChild);
+            }
+
+            if (logo && logo.parentNode !== host) {
+                if (controls && controls.parentNode === host) {
+                    host.insertBefore(logo, controls);
+                } else if (button && button.parentNode === host) {
+                    button.insertAdjacentElement("afterend", logo);
+                } else {
+                    host.appendChild(logo);
+                }
+            }
+
+            if (search && search.parentNode !== host) {
+                host.appendChild(search);
+            }
+
+            if (search) search.classList.add("preis-lando-mobile-search");
+            topBar.classList.add("preis-lando-mobile-header");
+
+            requestAnimationFrame(function () {
+                requestAnimationFrame(function () {
+                    const headerRect = topBar.getBoundingClientRect();
+                    const searchBox = search
+                        ? (search.querySelector(".position-relative") || search)
+                        : topBar;
+                    const searchRect = searchBox.getBoundingClientRect();
+                    const headerHeight = Math.ceil(headerRect.height);
+                    const drawerTop = Math.max(0, Math.ceil(searchRect.bottom));
+                    if (headerHeight > 0) {
+                        document.documentElement.style.setProperty("--pl-mobile-header-height", headerHeight + "px");
+                    }
+                    if (drawerTop > 0) {
+                        document.documentElement.style.setProperty("--pl-mobile-drawer-top", drawerTop + "px");
+                    }
+                });
+            });
+        } else {
+            if (search) {
+                search.classList.remove("preis-lando-mobile-search");
+                restoreHeaderPosition(search);
+            }
+            restoreHeaderPosition(logo);
+            topBar.classList.remove("preis-lando-mobile-header");
+            closeMobileDrawer();
+        }
+    }
+
+    /* =====================================================
        INITIALISIERUNG
        ===================================================== */
 
     function initializeHoverNavigation() {
         ensureGlobalPreisLandoHeaderClasses();
+        syncPreisLandoHeaderLayout();
         const rootLink = findRootLink();
         if (!rootLink) return;
 
@@ -1136,10 +1268,12 @@
     function start() {
         ensureGlobalPreisLandoHeaderClasses();
         ensureMobileMenuButton();
+        syncPreisLandoHeaderLayout();
         initializeHoverNavigation();
 
         const observer = new MutationObserver(function () {
             ensureGlobalPreisLandoHeaderClasses();
+            syncPreisLandoHeaderLayout();
             scheduleInitialize();
         });
 
@@ -1158,6 +1292,7 @@
                 window.setTimeout(function () {
                     ensureGlobalPreisLandoHeaderClasses();
                     ensureMobileMenuButton();
+                    syncPreisLandoHeaderLayout();
                     initializeHoverNavigation();
                 }, delay);
             });
@@ -1200,6 +1335,7 @@
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(function () {
                 ensureGlobalPreisLandoHeaderClasses();
+                syncPreisLandoHeaderLayout();
                 initializeHoverNavigation();
                 if (!isHoverMode()) {
                     closeAllHoverMenus();

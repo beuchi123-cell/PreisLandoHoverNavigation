@@ -3,328 +3,69 @@
     "use strict";
 
     /* =====================================================
-       PREISLANDO HOVER NAVIGATION
-       Standard-Kategorienavigation -> Root 1838 ausblenden
-       und direkte Kinder als sichtbare Hauptnavigation zeigen.
+       PreisLando Clean Rebuild 2.0.0.0
+       Eine Initialisierung, ein MutationObserver, kein Polling.
        ===================================================== */
-
+    const VERSION = "2.0.0.0";
     const ROOT_CATEGORY_ID = 1838;
     const ROOT_CATEGORY_PATH = "/neuetischkultur-sw5";
     const ROOT_CATEGORY_NAME = "neuetischkultur sw5";
-
-    const HOVER_BREAKPOINT = 768;
+    const BREAKPOINT = 768;
+    const ROOT_CACHE_KEY = "preislando.clean.root.v2";
+    const ROOT_CACHE_TTL = 30 * 60 * 1000;
     const MAX_CHILDREN = 100;
-    const HOVER_OPEN_DELAY = 120;
-    const HOVER_CLOSE_DELAY = 350;
-    const IMAGE_PRELOAD_CONCURRENCY = 4;
-    const ROOT_CACHE_KEY = "preislando.rootCategories.v1427";
-    const ROOT_CACHE_TTL = 15 * 60 * 1000;
-    
-    window.PreisLandoHoverVersion = "1.4.27.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.27.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.27.0 geladen");
 
-    let hoverOpenTimer = null;
-    let hoverCloseTimer = null;
-    let activeHoverBox = null;
-    let initializeTimer = null;
-    let rootCategoriesPromise = null;
+    window.PreisLandoHoverVersion = VERSION;
+    document.documentElement.setAttribute("data-preislando-hover-version", VERSION);
 
-    const childCache = {};
-    const childRequests = {};
-    const categoryImageCache = {};
-    const categoryImageRequests = {};
+    const state = {
+        rootCategories: null,
+        rootPromise: null,
+        childCache: new Map(),
+        childRequests: new Map(),
+        imageCache: new Map(),
+        imageRequests: new Map(),
+        currentTopList: null,
+        hoverOpenTimer: null,
+        hoverCloseTimer: null,
+        activeBox: null,
+        refreshTimer: null,
+        observer: null,
+        mobileImagesLoaded: false,
+        priceCache: new Map(),
+        priceRequests: new Map(),
+        routeHref: window.location.href
+    };
 
-    const imagePreloadQueue = [];
-    let activeImagePreloads = 0;
+    const refreshHooks = [];
+    function registerRefresh(fn) {
+        if (typeof fn === "function") refreshHooks.push(fn);
+    }
 
-    function isHoverMode() {
-        return window.innerWidth >= HOVER_BREAKPOINT;
+    function onReady(fn) {
+        if (document.readyState === "loading") {
+            document.addEventListener("DOMContentLoaded", fn, { once: true });
+        } else {
+            fn();
+        }
     }
 
     function normalizePath(url) {
         if (!url) return "";
-
         try {
-            return new URL(url, window.location.origin)
-                .pathname
+            return new URL(url, window.location.origin).pathname
+                .replace(/\/+$/g, "")
                 .replace(/\/+/g, "/")
-                .replace(/\/$/, "")
                 .toLowerCase();
         } catch (error) {
-            return String(url)
-                .split("?")[0]
-                .split("#")[0]
+            return String(url).split("?")[0].split("#")[0]
+                .replace(/\/+$/g, "")
                 .replace(/\/+/g, "/")
-                .replace(/\/$/, "")
                 .toLowerCase();
         }
     }
 
-    function getCategoryName(category) {
-        return category && category.details && category.details[0]
-            ? (category.details[0].name || "")
-            : "";
-    }
-
-    function getCategoryUrl(category) {
-        if (!category || !category.url) return "#";
-
-        let url = String(category.url);
-        if (url.charAt(0) !== "/") url = "/" + url;
-
-        if (
-            typeof App !== "undefined" &&
-            App.urls &&
-            App.urls.includeLanguage &&
-            App.language
-        ) {
-            const languagePrefix = "/" + App.language;
-            if (url !== languagePrefix && url.indexOf(languagePrefix + "/") !== 0) {
-                url = languagePrefix + url;
-            }
-        }
-
-        return url;
-    }
-
-    function fetchCategoryChildren(categoryId) {
-        const url =
-            "/rest/io/categorytree/children" +
-            "?categoryId=" + encodeURIComponent(categoryId) +
-            "&indexStart=0" +
-            "&maxCount=" + MAX_CHILDREN;
-
-        return fetch(url, {
-            credentials: "same-origin",
-            headers: { "X-Requested-With": "XMLHttpRequest" }
-        })
-            .then(function (response) {
-                if (!response.ok) throw new Error("HTTP " + response.status);
-                return response.json();
-            })
-            .then(function (response) {
-                if (response && Array.isArray(response.data)) return response.data;
-                if (Array.isArray(response)) return response;
-                return [];
-            });
-    }
-
-    function loadCategoryChildren(categoryId) {
-        if (Object.prototype.hasOwnProperty.call(childCache, categoryId)) {
-            return Promise.resolve(childCache[categoryId]);
-        }
-
-        if (childRequests[categoryId]) return childRequests[categoryId];
-
-        childRequests[categoryId] = fetchCategoryChildren(categoryId)
-            .then(function (children) {
-                childCache[categoryId] = Array.isArray(children) ? children : [];
-                return childCache[categoryId];
-            })
-            .catch(function (error) {
-                console.error(
-                    "PreisLando HoverNavigation: Unterkategorien konnten nicht geladen werden.",
-                    categoryId,
-                    error
-                );
-                childCache[categoryId] = [];
-                return [];
-            })
-            .finally(function () {
-                delete childRequests[categoryId];
-            });
-
-        return childRequests[categoryId];
-    }
-
-    function readRootCategoryCache() {
-        try {
-            const raw = window.sessionStorage.getItem(ROOT_CACHE_KEY);
-            if (!raw) return null;
-            const parsed = JSON.parse(raw);
-            if (!parsed || !Array.isArray(parsed.categories) || !parsed.categories.length) return null;
-            if (!parsed.savedAt || Date.now() - parsed.savedAt > ROOT_CACHE_TTL) {
-                window.sessionStorage.removeItem(ROOT_CACHE_KEY);
-                return null;
-            }
-            return parsed.categories;
-        } catch (error) {
-            return null;
-        }
-    }
-
-    function writeRootCategoryCache(categories) {
-        if (!Array.isArray(categories) || categories.length < 3) return;
-        try {
-            window.sessionStorage.setItem(ROOT_CACHE_KEY, JSON.stringify({
-                savedAt: Date.now(),
-                categories: categories
-            }));
-        } catch (error) {}
-    }
-
-    function loadRootCategories() {
-        /* v1.4.27: Nur GUELTIGE, nicht-leere Antworten werden gecacht.
-           Auf Folgeseiten steht die Hauptnavigation dadurch sofort zur
-           Verfuegung; ein leerer/zu frueher API-Call kann den Cache nie
-           vergiften. */
-        if (Array.isArray(childCache[ROOT_CATEGORY_ID]) && childCache[ROOT_CATEGORY_ID].length) {
-            return Promise.resolve(childCache[ROOT_CATEGORY_ID]);
-        }
-
-        const cached = readRootCategoryCache();
-        if (cached && cached.length) {
-            childCache[ROOT_CATEGORY_ID] = cached;
-            return Promise.resolve(cached);
-        }
-
-        if (rootCategoriesPromise) return rootCategoriesPromise;
-
-        const retryDelays = [0, 120, 320, 700, 1400];
-
-        function attempt(index) {
-            const delay = retryDelays[index] || 0;
-            const wait = delay > 0
-                ? new Promise(function (resolve) { window.setTimeout(resolve, delay); })
-                : Promise.resolve();
-
-            return wait.then(function () {
-                return fetchCategoryChildren(ROOT_CATEGORY_ID);
-            }).then(function (categories) {
-                if (Array.isArray(categories) && categories.length) {
-                    childCache[ROOT_CATEGORY_ID] = categories;
-                    writeRootCategoryCache(categories);
-                    return categories;
-                }
-
-                if (index + 1 < retryDelays.length) {
-                    return attempt(index + 1);
-                }
-
-                console.warn("PreisLando HoverNavigation: Root-Kategorien sind noch leer; spaeterer Neuversuch folgt.");
-                return [];
-            }).catch(function (error) {
-                if (index + 1 < retryDelays.length) {
-                    return attempt(index + 1);
-                }
-                console.error("PreisLando HoverNavigation: Root-Kategorien konnten nicht geladen werden.", error);
-                return [];
-            });
-        }
-
-        rootCategoriesPromise = attempt(0).then(function (categories) {
-            rootCategoriesPromise = null;
-            return categories;
-        });
-
-        return rootCategoriesPromise;
-    }
-
-    function getCategoryImage(category) {
-        if (!category || !category.details || !category.details[0]) return "";
-
-        const details = category.details[0];
-        let imagePath = details.image2Path || details.imagePath || "";
-        if (!imagePath) return "";
-
-        if (/^https?:\/\//i.test(imagePath)) return imagePath;
-
-        imagePath = imagePath.replace(/^\/+/, "");
-        return imagePath.indexOf("documents/") === 0
-            ? "/" + imagePath
-            : "/documents/" + imagePath;
-    }
-
-    function loadFallbackCategoryImage(category) {
-        if (!category || !category.id) return Promise.resolve("");
-
-        const categoryId = category.id;
-
-        if (Object.prototype.hasOwnProperty.call(categoryImageCache, categoryId)) {
-            return Promise.resolve(categoryImageCache[categoryId]);
-        }
-
-        if (categoryImageRequests[categoryId]) {
-            return categoryImageRequests[categoryId];
-        }
-
-        const url = "/rest/preislando/category-image/" + encodeURIComponent(categoryId);
-
-        categoryImageRequests[categoryId] = fetch(url, {
-            credentials: "same-origin",
-            headers: { "X-Requested-With": "XMLHttpRequest" }
-        })
-            .then(function (response) {
-                if (!response.ok) throw new Error("Kategorie-Bild HTTP " + response.status);
-                return response.json();
-            })
-            .then(function (data) {
-                const image = data && data.success && data.image ? data.image : "";
-                categoryImageCache[categoryId] = image;
-                return image;
-            })
-            .catch(function (error) {
-                console.warn(
-                    "PreisLando HoverNavigation: Kategorie-Bild konnte nicht geladen werden",
-                    categoryId,
-                    error
-                );
-                categoryImageCache[categoryId] = "";
-                return "";
-            })
-            .finally(function () {
-                delete categoryImageRequests[categoryId];
-            });
-
-        return categoryImageRequests[categoryId];
-    }
-
-    function runImagePreloadQueue() {
-        while (
-            activeImagePreloads < IMAGE_PRELOAD_CONCURRENCY &&
-            imagePreloadQueue.length
-        ) {
-            const job = imagePreloadQueue.shift();
-            activeImagePreloads++;
-
-            Promise.resolve()
-                .then(job)
-                .catch(function () {})
-                .finally(function () {
-                    activeImagePreloads--;
-                    runImagePreloadQueue();
-                });
-        }
-    }
-
-    function queueImagePreload(job) {
-        imagePreloadQueue.push(job);
-        runImagePreloadQueue();
-    }
-
-    function preloadImage(url) {
-        if (!url) return Promise.resolve();
-        return new Promise(function (resolve) {
-            const img = new Image();
-            let done = false;
-            function finish() {
-                if (done) return;
-                done = true;
-                resolve();
-            }
-            img.onload = finish;
-            img.onerror = finish;
-            img.src = url;
-            if (img.complete) finish();
-        });
-    }
-
-    /* =====================================================
-       STANDARDNAVIGATION FINDEN
-       ===================================================== */
-
-    function getStrictHeaderScope() {
+    function getHeaderScope() {
         return document.querySelector("#page-header-parent") ||
             document.querySelector("#page-header") ||
             document.querySelector(".header-container") ||
@@ -332,493 +73,481 @@
             null;
     }
 
-    function findRootLink() {
-        /* v1.4.27: Ausschliesslich im HEADER suchen. Auf Kategorie-Seiten
-           existiert dieselbe Root-Kategorie auch im linken Kategoriebaum.
-           Die fruehere Dokument-Suche konnte deshalb den SIDEBAR-Baum als
-           Shopnavigation markieren und das echte Kopfmenue stehen lassen. */
-        const headerScope = getStrictHeaderScope();
-        if (!headerScope || !headerScope.querySelectorAll) return null;
+    function getCategoryName(category) {
+        if (!category) return "";
+        if (category.name) return category.name;
+        if (category.details && category.details[0]) return category.details[0].name || "";
+        return "";
+    }
 
-        const preferred = headerScope.querySelector(".preis-lando-navigation");
+    function getCategoryUrl(category) {
+        if (!category) return "#";
+        let url = category.url || category.href || "#";
+        if (url === "#") return url;
+        url = String(url);
+        if (url.charAt(0) !== "/" && !/^https?:\/\//i.test(url)) url = "/" + url;
+        if (/^https?:\/\//i.test(url)) return url;
 
-        function findIn(scope) {
-            if (!scope || !scope.querySelectorAll) return null;
-            const links = Array.from(scope.querySelectorAll("li.ddown > a, a"));
-            return links.find(function (link) {
-                const path = normalizePath(link.getAttribute("href") || link.href);
-                const text = (link.textContent || "").trim().toLowerCase();
-
-                return path === ROOT_CATEGORY_PATH ||
-                    path.endsWith(ROOT_CATEGORY_PATH) ||
-                    text === ROOT_CATEGORY_NAME;
-            }) || null;
+        if (typeof App !== "undefined" && App.urls && App.urls.includeLanguage && App.language) {
+            const prefix = "/" + App.language;
+            if (url !== prefix && url.indexOf(prefix + "/") !== 0) url = prefix + url;
         }
+        return url;
+    }
 
-        return findIn(preferred) || findIn(headerScope);
+    function getCategoryImage(category) {
+        if (!category) return "";
+        if (category.image) return category.image;
+        if (!category.details || !category.details[0]) return "";
+        const details = category.details[0];
+        let imagePath = details.image2Path || details.imagePath || "";
+        if (!imagePath) return "";
+        if (/^https?:\/\//i.test(imagePath)) return imagePath;
+        imagePath = imagePath.replace(/^\/+/, "");
+        return imagePath.indexOf("documents/") === 0 ? "/" + imagePath : "/documents/" + imagePath;
+    }
+
+    function findRootLink() {
+        const header = getHeaderScope();
+        if (!header) return null;
+        const links = Array.from(header.querySelectorAll("a[href]"));
+        return links.find(function (link) {
+            const path = normalizePath(link.getAttribute("href") || link.href);
+            const text = (link.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+            return path === ROOT_CATEGORY_PATH || path.endsWith(ROOT_CATEGORY_PATH) || text === ROOT_CATEGORY_NAME;
+        }) || null;
     }
 
     function findTopList(rootLink) {
+        const li = rootLink && rootLink.closest("li");
+        return li && li.parentElement && li.parentElement.tagName === "UL" ? li.parentElement : null;
+    }
+
+    function findNavigationHost(rootLink) {
         if (!rootLink) return null;
-        const rootLi = rootLink.closest("li");
-        if (!rootLi) return null;
-        return rootLi.parentElement && rootLi.parentElement.tagName === "UL"
-            ? rootLi.parentElement
-            : null;
-    }
-
-    function getGeneratedBoxes(topList) {
-        return Array.from(
-            topList.querySelectorAll(":scope > li.preis-lando-nav-category")
-        );
-    }
-
-    function categoryMatchesLink(category, link) {
-        const categoryPath = normalizePath(getCategoryUrl(category));
-        const linkPath = normalizePath(link.getAttribute("href") || link.href);
-
-        if (categoryPath && linkPath && (
-            categoryPath === linkPath ||
-            linkPath.endsWith(categoryPath) ||
-            categoryPath.endsWith(linkPath)
-        )) {
-            return true;
-        }
-
-        return getCategoryName(category).trim().toLowerCase() ===
-            (link.textContent || "").trim().toLowerCase();
-    }
-
-    /* =====================================================
-       HAUPTKATEGORIEN AUS ROOT HOCHZIEHEN
-       ===================================================== */
-
-    function buildPromotedNavigation(rootLink, categories) {
-        const rootLi = rootLink.closest("li");
+        const header = getHeaderScope();
+        let node = rootLink.closest("nav, .main-navbar-collapsable, .widget-navigation-tree, .widget-navigation");
+        if (node && node.parentElement && header && header.contains(node.parentElement)) return node.parentElement;
+        if (node) return node;
         const topList = findTopList(rootLink);
+        return topList ? (topList.closest("nav") || topList.parentElement) : null;
+    }
 
-        if (!rootLi || !topList || !categories.length) return null;
-
-        topList.classList.add("preis-lando-navigation-root");
-        rootLi.classList.add("preis-lando-original-root");
-
-        if (topList.dataset.preisLandoPromoted === "1") {
-            const generated = getGeneratedBoxes(topList);
-            if (generated.length === categories.length && generated.length > 0) {
-                return topList;
-            }
-
-            /* plentyShop kann beim internen Seitenwechsel die UL-Huelle
-               behalten, aber deren Kinder neu rendern. Dann darf das alte
-               data-Flag den Neuaufbau nicht blockieren. */
-            generated.forEach(function (entry) { entry.remove(); });
-            const staleMenu = getSharedMenu(topList);
-            if (staleMenu) staleMenu.remove();
-            delete topList.dataset.preisLandoPromoted;
-            delete topList.dataset.preisLandoHoverBoundary;
-            delete topList.dataset.preisLandoPreloadStarted;
-        }
-
-        categories.forEach(function (category) {
-            if (!category || !category.id) return;
-
-            const box = document.createElement("li");
-            box.className =
-                "preis-lando-nav-category preis-lando-hover-parent";
-            box.dataset.categoryId = String(category.id);
-
-            const link = document.createElement("a");
-            link.className = "preis-lando-nav-link";
-            link.href = getCategoryUrl(category);
-            link.setAttribute("itemprop", "name");
-            link.textContent = getCategoryName(category);
-
-            box.appendChild(link);
-            topList.insertBefore(box, rootLi);
-
-            prepareCategoryBox(topList, box, category);
+    function findLogoHost(header) {
+        if (!header) return null;
+        const existing = header.querySelector(".preis-lando-logo");
+        if (existing) return existing;
+        const images = Array.from(header.querySelectorAll("img"));
+        let best = null;
+        let bestScore = -1;
+        images.forEach(function (img) {
+            const haystack = [img.currentSrc, img.src, img.alt, img.title].join(" ").toLowerCase();
+            let score = 0;
+            if (haystack.indexOf("preislando") !== -1 || haystack.indexOf("preis-lando") !== -1) score += 100;
+            if (haystack.indexOf("logo") !== -1) score += 30;
+            if (haystack.indexOf("preis") !== -1 && haystack.indexOf("lando") !== -1) score += 60;
+            if (score > bestScore) { bestScore = score; best = img; }
         });
-
-        topList.dataset.preisLandoPromoted = "1";
-        return topList;
+        if (!best || bestScore < 30) return null;
+        return best.closest(".widget-image-box") || best.closest("[class*='widget-image']") || best.parentElement;
     }
 
-    /* =====================================================
-       GEMEINSAMES RASTER / HOVER-MENÜ
-       Der Hover-Bereich ist EIN gemeinsames Grid-Element unter
-       allen Hauptkategorien. Er hängt nicht mehr an einem einzelnen LI.
-       ===================================================== */
+    function findTopBarHost(header) {
+        if (!header) return null;
+        const existing = header.querySelector(".preis-lando-topbar");
+        if (existing) return existing;
+        const items = header.querySelector(".top-bar-items");
+        if (items) return items.parentElement || items;
+        const search = header.querySelector(".always-visible-search");
+        const controls = header.querySelector(".controls");
+        if (!search || !controls) return null;
+        let a = search;
+        const parents = new Set();
+        while (a) { parents.add(a); a = a.parentElement; }
+        let b = controls;
+        while (b) {
+            if (parents.has(b) && b !== header) return b;
+            b = b.parentElement;
+        }
+        return null;
+    }
 
-    function cancelHoverOpen() {
-        if (hoverOpenTimer) {
-            clearTimeout(hoverOpenTimer);
-            hoverOpenTimer = null;
+    function commonAncestor(a, b) {
+        if (!a || !b) return null;
+        const parents = new Set();
+        while (a) { parents.add(a); a = a.parentElement; }
+        while (b) { if (parents.has(b)) return b; b = b.parentElement; }
+        return null;
+    }
+
+    const originalPositions = new WeakMap();
+    function rememberPosition(el) {
+        if (!el || !el.parentNode || originalPositions.has(el)) return;
+        originalPositions.set(el, { parent: el.parentNode, next: el.nextSibling });
+    }
+    function restorePosition(el) {
+        const saved = el && originalPositions.get(el);
+        if (!saved || !saved.parent || !saved.parent.isConnected) return;
+        if (saved.next && saved.next.parentNode === saved.parent) saved.parent.insertBefore(el, saved.next);
+        else saved.parent.appendChild(el);
+    }
+
+    function ensureHeaderClasses() {
+        const header = getHeaderScope();
+        if (!header) return null;
+
+        const rootLink = findRootLink();
+        const navHost = findNavigationHost(rootLink);
+        if (navHost) navHost.classList.add("preis-lando-navigation");
+
+        const logo = findLogoHost(header);
+        if (logo) logo.classList.add("preis-lando-logo");
+
+        const topbar = findTopBarHost(header);
+        if (topbar) topbar.classList.add("preis-lando-topbar");
+
+        if (logo && topbar && !header.querySelector(".header-logo-suche")) {
+            const row = commonAncestor(logo, topbar);
+            if (row && row !== header && row !== document.body) row.classList.add("header-logo-suche");
+        }
+
+        return { header: header, rootLink: rootLink, navHost: navHost, logo: logo, topbar: topbar };
+    }
+
+    function ensureMobileButton(topbar) {
+        if (!topbar) return null;
+        const host = topbar.querySelector(".top-bar-items") || topbar.querySelector(":scope > .widget-inner") || topbar;
+        let button = host.querySelector(".kategorie-mobile-button") || document.querySelector(".kategorie-mobile-button");
+        if (!button && window.innerWidth >= BREAKPOINT) return null;
+        if (!button) {
+            button = document.createElement("button");
+            button.type = "button";
+            button.className = "kategorie-mobile-button";
+            button.setAttribute("aria-label", "Kategorien öffnen");
+            button.setAttribute("aria-expanded", "false");
+            button.innerHTML = "<span>Kategorien</span>";
+        }
+        if (window.innerWidth < BREAKPOINT && button.parentNode !== host) host.insertBefore(button, host.firstChild);
+        return button;
+    }
+
+    function syncHeaderLayout(parts) {
+        if (!parts || !parts.topbar) return;
+        const topbar = parts.topbar;
+        const host = topbar.querySelector(".top-bar-items") || topbar.querySelector(":scope > .widget-inner") || topbar;
+        const logo = parts.logo;
+        const controls = topbar.querySelector(".controls") || parts.header.querySelector(".controls");
+        const search = topbar.querySelector(".always-visible-search") || parts.header.querySelector(".always-visible-search");
+        const button = ensureMobileButton(topbar);
+        const mobile = window.innerWidth < BREAKPOINT;
+
+        if (mobile) {
+            topbar.classList.add("preis-lando-mobile-header");
+            rememberPosition(logo);
+            rememberPosition(search);
+
+            if (button && button.parentNode !== host) host.insertBefore(button, host.firstChild);
+            if (logo && logo.parentNode !== host) {
+                if (controls && controls.parentNode === host) host.insertBefore(logo, controls);
+                else if (button && button.parentNode === host) button.insertAdjacentElement("afterend", logo);
+                else host.appendChild(logo);
+            }
+            if (search && search.parentNode !== host) host.appendChild(search);
+            if (search) search.classList.add("preis-lando-mobile-search");
+
+            requestAnimationFrame(function () {
+                const searchBox = search ? (search.querySelector(".position-relative") || search) : topbar;
+                const bottom = Math.max(0, Math.ceil(searchBox.getBoundingClientRect().bottom));
+                if (bottom) document.documentElement.style.setProperty("--pl-mobile-drawer-top", bottom + "px");
+            });
+        } else {
+            topbar.classList.remove("preis-lando-mobile-header");
+            if (search) { search.classList.remove("preis-lando-mobile-search"); restorePosition(search); }
+            restorePosition(logo);
+            closeMobileDrawer();
         }
     }
 
-    function cancelHoverClose() {
-        if (hoverCloseTimer) {
-            clearTimeout(hoverCloseTimer);
-            hoverCloseTimer = null;
-        }
+    function extractDomCategories(rootLink) {
+        const rootLi = rootLink && rootLink.closest("li");
+        if (!rootLi) return [];
+        let list = Array.from(rootLi.children).find(function (el) { return el.tagName === "UL"; });
+        if (!list) list = rootLi.querySelector(":scope ul");
+        if (!list) return [];
+
+        return Array.from(list.children).filter(function (li) { return li.tagName === "LI"; }).map(function (li) {
+            const a = li.querySelector(":scope > a") || li.querySelector("a[href]");
+            if (!a) return null;
+            const idRaw = li.getAttribute("data-category-id") || a.getAttribute("data-category-id") || li.dataset.categoryId || a.dataset.categoryId || "";
+            const id = /^\d+$/.test(String(idRaw)) ? parseInt(idRaw, 10) : null;
+            return {
+                id: id,
+                url: a.getAttribute("href") || a.href || "#",
+                details: [{ name: (a.textContent || "").replace(/\s+/g, " ").trim() }]
+            };
+        }).filter(function (c) { return c && getCategoryName(c); }).slice(0, 20);
+    }
+
+    function readRootCache() {
+        try {
+            const raw = sessionStorage.getItem(ROOT_CACHE_KEY);
+            if (!raw) return null;
+            const data = JSON.parse(raw);
+            if (!data || !Array.isArray(data.categories) || data.categories.length < 3) return null;
+            if (!data.savedAt || Date.now() - data.savedAt > ROOT_CACHE_TTL) {
+                sessionStorage.removeItem(ROOT_CACHE_KEY);
+                return null;
+            }
+            return data.categories;
+        } catch (error) { return null; }
+    }
+
+    function writeRootCache(categories) {
+        if (!Array.isArray(categories) || categories.length < 3) return;
+        try { sessionStorage.setItem(ROOT_CACHE_KEY, JSON.stringify({ savedAt: Date.now(), categories: categories })); }
+        catch (error) {}
+    }
+
+    function fetchCategoryChildren(categoryId) {
+        const url = "/rest/io/categorytree/children?categoryId=" + encodeURIComponent(categoryId) + "&indexStart=0&maxCount=" + MAX_CHILDREN;
+        return fetch(url, { credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (response) { if (!response.ok) throw new Error("HTTP " + response.status); return response.json(); })
+            .then(function (data) {
+                if (data && Array.isArray(data.data)) return data.data;
+                if (Array.isArray(data)) return data;
+                return [];
+            });
+    }
+
+    function loadChildren(categoryId) {
+        if (!categoryId) return Promise.resolve([]);
+        if (state.childCache.has(categoryId)) return Promise.resolve(state.childCache.get(categoryId));
+        if (state.childRequests.has(categoryId)) return state.childRequests.get(categoryId);
+        const request = fetchCategoryChildren(categoryId)
+            .then(function (items) { const value = Array.isArray(items) ? items : []; state.childCache.set(categoryId, value); return value; })
+            .catch(function (error) { console.warn("[PreisLando] Unterkategorien", categoryId, error); return []; })
+            .finally(function () { state.childRequests.delete(categoryId); });
+        state.childRequests.set(categoryId, request);
+        return request;
+    }
+
+    function loadOfficialRootCategories() {
+        if (state.rootCategories && state.rootCategories.length) return Promise.resolve(state.rootCategories);
+        if (state.rootPromise) return state.rootPromise;
+        state.rootPromise = fetchCategoryChildren(ROOT_CATEGORY_ID)
+            .then(function (categories) {
+                if (Array.isArray(categories) && categories.length >= 3) {
+                    state.rootCategories = categories;
+                    writeRootCache(categories);
+                    return categories;
+                }
+                return [];
+            })
+            .catch(function (error) { console.warn("[PreisLando] Root-Kategorien", error); return []; })
+            .finally(function () { state.rootPromise = null; });
+        return state.rootPromise;
+    }
+
+    function categoriesSignature(categories) {
+        return categories.map(function (c) { return String(c.id || "x") + ":" + getCategoryName(c) + ":" + normalizePath(getCategoryUrl(c)); }).join("|");
+    }
+
+    function closeHoverMenu() {
+        clearTimeout(state.hoverOpenTimer);
+        clearTimeout(state.hoverCloseTimer);
+        state.hoverOpenTimer = null;
+        state.hoverCloseTimer = null;
+        document.querySelectorAll(".preis-lando-hover-menu.is-visible").forEach(function (m) { m.classList.remove("is-visible"); });
+        document.querySelectorAll(".preis-lando-nav-category.is-hover-active").forEach(function (b) { b.classList.remove("is-hover-active"); });
+        state.activeBox = null;
     }
 
     function getSharedMenu(topList) {
-        return topList
-            ? topList.querySelector(":scope > .preis-lando-hover-menu")
-            : null;
-    }
-
-    function closeAllHoverMenus() {
-        cancelHoverOpen();
-        cancelHoverClose();
-
-        document.querySelectorAll(".preis-lando-hover-menu").forEach(function (menu) {
-            menu.classList.remove("is-visible", "is-loading", "is-empty");
-        });
-
-        document.querySelectorAll(".preis-lando-hover-parent").forEach(function (box) {
-            box.classList.remove("is-hover-active");
-        });
-
-        document.querySelectorAll(".preis-lando-navigation-root").forEach(function (root) {
-            /* v1.4.16: auch die graue Unterzeilen-Brücke vollständig zurücksetzen. */
-            setActiveCategory(root, null);
-            root.classList.remove("preis-lando-hover-open");
-        });
-
-        activeHoverBox = null;
-    }
-
-    function closeActiveHoverMenu() {
-        if (!activeHoverBox) {
-            closeAllHoverMenus();
-            return;
-        }
-
-        const topList = activeHoverBox.closest(".preis-lando-navigation-root");
-        const menu = getSharedMenu(topList);
-        if (menu) menu.classList.remove("is-visible", "is-loading");
-
-        activeHoverBox.classList.remove("is-hover-active");
-        if (topList) {
-            /* v1.4.16: graue Unterzeilen-Brücke + aria/tabindex sauber zurücksetzen. */
-            setActiveCategory(topList, null);
-            topList.classList.remove("preis-lando-hover-open");
-        }
-        activeHoverBox = null;
-    }
-
-    function setActiveCategory(topList, box) {
-        const boxes = getGeneratedBoxes(topList);
-        const activeRect = box ? box.getBoundingClientRect() : null;
-        const activeCenter = activeRect ? activeRect.left + activeRect.width / 2 : null;
-
-        boxes.forEach(function (entry) {
-            entry.classList.toggle("is-hover-active", entry === box);
-            entry.classList.remove("preis-lando-hover-under-active");
-
-            const entryLink = entry.querySelector(":scope > .preis-lando-nav-link");
-            if (entryLink) {
-                entryLink.removeAttribute("aria-hidden");
-                if (entryLink.dataset.plOriginalTabindex === "__none__") {
-                    entryLink.removeAttribute("tabindex");
-                } else if (entryLink.dataset.plOriginalTabindex !== undefined) {
-                    entryLink.setAttribute("tabindex", entryLink.dataset.plOriginalTabindex);
-                }
-            }
-
-            if (!box || entry === box || !activeRect) return;
-
-            const entryRect = entry.getBoundingClientRect();
-            const entryCenter = entryRect.left + entryRect.width / 2;
-
-            /* Liegt in einer tieferen Menüzeile exakt unter der aktiven Spalte? */
-            if (
-                entryRect.top > activeRect.top + 2 &&
-                Math.abs(entryCenter - activeCenter) < Math.max(3, activeRect.width * 0.15)
-            ) {
-                entry.classList.add("preis-lando-hover-under-active");
-
-                /* Dieser Menüpunkt ist während des Hover-Pfads nur noch
-                   graue Verbindungsfläche und darf nicht anklickbar/fokussierbar sein. */
-                if (entryLink) {
-                    if (entryLink.dataset.plOriginalTabindex === undefined) {
-                        entryLink.dataset.plOriginalTabindex = entryLink.hasAttribute("tabindex")
-                            ? entryLink.getAttribute("tabindex")
-                            : "__none__";
-                    }
-                    entryLink.setAttribute("tabindex", "-1");
-                    entryLink.setAttribute("aria-hidden", "true");
-                }
-            }
-        });
-    }
-
-    function updateSharedMenuPointer(topList, box, menu) {
-        if (!topList || !box || !menu) return;
-
-        const rootRect = topList.getBoundingClientRect();
-        const boxRect = box.getBoundingClientRect();
-        const left = Math.max(0, boxRect.left - rootRect.left) + "px";
-        const width = boxRect.width + "px";
-
-        menu.style.setProperty("--pl-active-left", left);
-        menu.style.setProperty("--pl-active-width", width);
-
-        /* Auch am Root setzen: damit die freie Zelle unter Spalte 1/6
-           nur bei Bedarf grau dargestellt wird. */
-        topList.style.setProperty("--pl-active-left", left);
-        topList.style.setProperty("--pl-active-width", width);
+        return topList ? topList.querySelector(":scope > .preis-lando-hover-menu") : null;
     }
 
     function getOrCreateSharedMenu(topList) {
         let menu = getSharedMenu(topList);
         if (menu) return menu;
-
         menu = document.createElement("li");
         menu.className = "preis-lando-hover-menu";
-        menu.setAttribute("aria-live", "polite");
-
-        const closeButton = document.createElement("button");
-        closeButton.type = "button";
-        closeButton.className = "preis-lando-hover-close";
-        closeButton.innerHTML =
-            "<span>Schließen</span><span class=\"preis-lando-hover-close-x\">×</span>";
-
-        closeButton.addEventListener("click", function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            closeAllHoverMenus();
-        });
-
-        const content = document.createElement("div");
-        content.className = "preis-lando-hover-content";
-
-        menu.appendChild(closeButton);
-        menu.appendChild(content);
-
-        menu.addEventListener("mouseenter", function () {
-            cancelHoverClose();
-        });
-
-        menu.addEventListener("mouseleave", function () {
-            cancelHoverClose();
-            hoverCloseTimer = setTimeout(function () {
-                closeActiveHoverMenu();
-            }, HOVER_CLOSE_DELAY);
-        });
-
-        const originalRoot = topList.querySelector(":scope > .preis-lando-original-root");
-        if (originalRoot) topList.insertBefore(menu, originalRoot);
-        else topList.appendChild(menu);
-
+        menu.innerHTML = '<button type="button" class="preis-lando-hover-close" aria-label="Menü schließen"><span class="preis-lando-hover-close-x">×</span> Schließen</button><div class="preis-lando-hover-content"></div>';
+        topList.appendChild(menu);
+        menu.addEventListener("pointerenter", function () { clearTimeout(state.hoverCloseTimer); });
+        menu.addEventListener("pointerleave", function () { state.hoverCloseTimer = setTimeout(closeHoverMenu, 220); });
+        menu.querySelector(".preis-lando-hover-close").addEventListener("click", closeHoverMenu);
         return menu;
     }
 
-    function showLoading(menu) {
-        const content = menu.querySelector(".preis-lando-hover-content");
-        if (!content) return;
-
-        content.innerHTML = "";
-        menu.classList.remove("is-empty");
-        menu.classList.add("is-loading", "is-visible");
-
-        const loading = document.createElement("div");
-        loading.className = "preis-lando-hover-loading";
-        loading.textContent = "Kategorien werden geladen …";
-        content.appendChild(loading);
+    function loadFallbackImage(category) {
+        if (!category || !category.id) return Promise.resolve("");
+        if (state.imageCache.has(category.id)) return Promise.resolve(state.imageCache.get(category.id));
+        if (state.imageRequests.has(category.id)) return state.imageRequests.get(category.id);
+        const request = fetch("/rest/preislando/category-image/" + encodeURIComponent(category.id), {
+            credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" }
+        }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (data) { const image = data && data.success && data.image ? data.image : ""; state.imageCache.set(category.id, image); return image; })
+          .catch(function () { return ""; })
+          .finally(function () { state.imageRequests.delete(category.id); });
+        state.imageRequests.set(category.id, request);
+        return request;
     }
 
-    function createCategoryImageElement(category) {
-        const image = document.createElement("img");
-        image.className = "preis-lando-hover-image";
-        image.alt = getCategoryName(category);
-        image.loading = "lazy";
-
-        const directImage = getCategoryImage(category);
-        if (directImage) {
-            image.src = directImage;
-            return image;
-        }
-
-        image.classList.add("preis-lando-hover-image-empty");
-        image.style.visibility = "hidden";
-
-        loadFallbackCategoryImage(category).then(function (fallbackImage) {
-            if (!fallbackImage) return;
-            image.src = fallbackImage;
-            image.classList.remove("preis-lando-hover-image-empty");
-            image.style.visibility = "visible";
+    function setImageForElement(img, category, wrap) {
+        const direct = getCategoryImage(category);
+        if (direct) { img.src = direct; return; }
+        loadFallbackImage(category).then(function (url) {
+            if (url) img.src = url;
+            else if (wrap) wrap.classList.add("is-empty");
         });
-
-        return image;
     }
 
-    function renderChildren(menu, children) {
+    function renderHoverChildren(menu, children) {
         const content = menu.querySelector(".preis-lando-hover-content");
         if (!content) return;
-
         content.innerHTML = "";
-        menu.classList.remove("is-loading");
-
-        if (!children || !children.length) {
+        if (!children.length) {
             menu.classList.add("is-empty");
             menu.classList.remove("is-visible");
             return;
         }
-
         menu.classList.remove("is-empty");
-
-        children.forEach(function (category) {
-            const item = document.createElement("a");
-            item.className = "preis-lando-hover-item";
-            item.href = getCategoryUrl(category);
-
-            item.appendChild(createCategoryImageElement(category));
-
+        children.forEach(function (child) {
+            const a = document.createElement("a");
+            a.className = "preis-lando-hover-item";
+            a.href = getCategoryUrl(child);
+            const img = document.createElement("img");
+            img.className = "preis-lando-hover-image";
+            img.loading = "lazy";
+            img.alt = "";
             const text = document.createElement("span");
             text.className = "preis-lando-hover-text";
-            text.textContent = getCategoryName(category);
-            item.appendChild(text);
-
-            content.appendChild(item);
+            text.textContent = getCategoryName(child);
+            a.appendChild(img);
+            a.appendChild(text);
+            content.appendChild(a);
+            setImageForElement(img, child, null);
         });
+    }
 
+    function openHoverFor(box, category, topList) {
+        if (window.innerWidth < BREAKPOINT || !category || !category.id) return;
+        closeHoverMenu();
+        state.activeBox = box;
+        box.classList.add("is-hover-active");
+        const menu = getOrCreateSharedMenu(topList);
         menu.classList.add("is-visible");
-    }
-
-    /* =====================================================
-       v1.4.12 – Desktop-Hover als gemeinsamer Bereich
-
-       Wichtig: Das Menü wird NICHT mehr beim Verlassen eines einzelnen
-       Kategorien-LI geschlossen. Solange sich die Maus irgendwo im
-       gemeinsamen Navigations-Grid (inkl. grauer Verbindungszelle und
-       Mega-Menü) befindet, bleibt die aktive Hauptkategorie offen.
-       Dadurch funktioniert der Weg z.B.
-       Gedeckter Tisch -> Sale -> Mega-Menü ohne Overlay/Mousemove-Tricks.
-       ===================================================== */
-    function ensureHoverBoundary(topList) {
-        if (!topList || topList.dataset.preisLandoHoverBoundary === "1") return;
-        topList.dataset.preisLandoHoverBoundary = "1";
-
-        topList.addEventListener("mouseenter", function () {
-            if (!isHoverMode()) return;
-            cancelHoverClose();
-        });
-
-        topList.addEventListener("mouseleave", function () {
-            if (!isHoverMode()) return;
-
-            cancelHoverOpen();
-            cancelHoverClose();
-            hoverCloseTimer = setTimeout(function () {
-                closeActiveHoverMenu();
-            }, HOVER_CLOSE_DELAY);
+        const content = menu.querySelector(".preis-lando-hover-content");
+        content.innerHTML = '<div class="preis-lando-hover-loading">Unterkategorien werden geladen …</div>';
+        loadChildren(category.id).then(function (children) {
+            if (state.activeBox !== box) return;
+            renderHoverChildren(menu, children);
         });
     }
 
-    function prepareCategoryBox(topList, box, category) {
-        ensureHoverBoundary(topList);
-        if (box.dataset.preisLandoHoverReady === "1") return;
-        box.dataset.preisLandoHoverReady = "1";
+    function bindHoverBox(box, category, topList) {
+        if (!category.id) return;
+        box.addEventListener("pointerenter", function () {
+            if (window.innerWidth < BREAKPOINT) return;
+            clearTimeout(state.hoverOpenTimer);
+            clearTimeout(state.hoverCloseTimer);
+            state.hoverOpenTimer = setTimeout(function () { openHoverFor(box, category, topList); }, 90);
+        });
+        box.addEventListener("pointerleave", function () {
+            clearTimeout(state.hoverOpenTimer);
+            state.hoverCloseTimer = setTimeout(closeHoverMenu, 260);
+        });
+    }
 
-        function openMenu() {
-            if (!isHoverMode()) return;
+    function renderNavigation(rootLink, categories) {
+        const rootLi = rootLink && rootLink.closest("li");
+        const topList = findTopList(rootLink);
+        if (!rootLi || !topList || !categories || !categories.length) return null;
 
-            cancelHoverClose();
+        const signature = categoriesSignature(categories);
+        topList.classList.add("preis-lando-navigation-root");
+        rootLi.classList.add("preis-lando-original-root");
+        if (topList.dataset.plCleanSignature === signature && topList.querySelector(".preis-lando-nav-category")) return topList;
 
-            if (activeHoverBox && activeHoverBox !== box) {
-                activeHoverBox.classList.remove("is-hover-active");
-            }
+        topList.querySelectorAll(":scope > .preis-lando-nav-category, :scope > .preis-lando-hover-menu").forEach(function (el) { el.remove(); });
+        delete topList.dataset.plCleanSignature;
+        state.activeBox = null;
 
-            activeHoverBox = box;
-            setActiveCategory(topList, box);
-            topList.classList.add("preis-lando-hover-open");
+        categories.slice(0, 10).forEach(function (category, index) {
+            const box = document.createElement("li");
+            box.className = "preis-lando-nav-category" + (category.id ? " preis-lando-hover-parent" : "");
+            box.setAttribute("data-pl-index", String(index + 1));
+            if (category.id) box.dataset.categoryId = String(category.id);
+            const a = document.createElement("a");
+            a.className = "preis-lando-nav-link";
+            a.href = getCategoryUrl(category);
+            a.textContent = getCategoryName(category);
+            box.appendChild(a);
+            topList.insertBefore(box, rootLi);
+            bindHoverBox(box, category, topList);
+        });
+        topList.dataset.plCleanSignature = signature;
+        state.currentTopList = topList;
+        return topList;
+    }
 
-            const menu = getOrCreateSharedMenu(topList);
-            updateSharedMenuPointer(topList, box, menu);
-            const categoryId = String(category.id);
+    function getMobileDrawer() { return document.querySelector(".preis-lando-mobile-drawer"); }
 
-            if (menu.dataset.categoryId === categoryId && menu.dataset.loaded === "1") {
-                if (!menu.classList.contains("is-empty")) menu.classList.add("is-visible");
-                return;
-            }
-
-            menu.dataset.categoryId = categoryId;
-            menu.dataset.loaded = "0";
-            showLoading(menu);
-
-            loadCategoryChildren(category.id).then(function (children) {
-                if (activeHoverBox !== box || menu.dataset.categoryId !== categoryId) return;
-
-                menu.dataset.loaded = "1";
-                renderChildren(menu, children);
-            });
+    function buildMobileDrawer(categories) {
+        if (!categories || !categories.length || !document.body) return;
+        let drawer = getMobileDrawer();
+        if (!drawer) {
+            drawer = document.createElement("div");
+            drawer.className = "preis-lando-mobile-drawer";
+            drawer.setAttribute("role", "dialog");
+            drawer.setAttribute("aria-modal", "true");
+            drawer.setAttribute("aria-hidden", "true");
+            drawer.innerHTML = '<div class="preis-lando-mobile-drawer-panel"><div class="preis-lando-mobile-drawer-list"></div></div>';
+            document.body.appendChild(drawer);
         }
-
-        box.addEventListener("mouseenter", function () {
-            if (!isHoverMode()) return;
-
-            /* v1.4.12: Die graue Zelle unter der aktiven Hauptkategorie
-               ist nur eine Brücke zum Mega-Menü. Sie darf niemals ihr
-               eigenes Hover-Menü öffnen. */
-            if (box.classList.contains("preis-lando-hover-under-active")) {
-                cancelHoverOpen();
-                cancelHoverClose();
-                return;
+        const list = drawer.querySelector(".preis-lando-mobile-drawer-list");
+        const signature = categoriesSignature(categories);
+        if (list.dataset.plSignature === signature && list.children.length) return;
+        list.innerHTML = "";
+        categories.slice(0, 10).forEach(function (category) {
+            const a = document.createElement("a");
+            a.className = "preis-lando-mobile-tile";
+            a.href = getCategoryUrl(category);
+            const name = document.createElement("span");
+            name.className = "preis-lando-mobile-tile-name";
+            name.textContent = getCategoryName(category);
+            const wrap = document.createElement("span");
+            wrap.className = "preis-lando-mobile-tile-image-wrap";
+            const img = document.createElement("img");
+            img.className = "preis-lando-mobile-tile-image";
+            img.loading = "lazy";
+            img.alt = "";
+            wrap.appendChild(img);
+            a.appendChild(name);
+            a.appendChild(wrap);
+            list.appendChild(a);
+            const direct = getCategoryImage(category);
+            if (direct) img.src = direct;
+            else {
+                a.dataset.plCategoryId = category.id ? String(category.id) : "";
+                a._plCategory = category;
             }
-
-            cancelHoverOpen();
-            cancelHoverClose();
-            hoverOpenTimer = setTimeout(function () {
-                hoverOpenTimer = null;
-                openMenu();
-            }, HOVER_OPEN_DELAY);
         });
-
-        box.addEventListener("mouseleave", function () {
-            if (!isHoverMode()) return;
-
-            /* v1.4.12: Hier nur einen noch nicht ausgeführten OPEN-Timer
-               abbrechen. Das Schließen übernimmt ausschließlich der
-               gemeinsame topList-Hoverbereich. */
-            cancelHoverOpen();
-        });
+        list.dataset.plSignature = signature;
+        state.mobileImagesLoaded = false;
     }
 
-    function preloadHoverImages(categories) {
-        if (!isHoverMode() || !Array.isArray(categories)) return;
-
-        categories.forEach(function (mainCategory) {
-            if (!mainCategory || !mainCategory.id) return;
-
-            loadCategoryChildren(mainCategory.id).then(function (children) {
-                children.forEach(function (child) {
-                    if (!child || !child.id) return;
-
-                    const directImage = getCategoryImage(child);
-                    if (directImage) {
-                        queueImagePreload(function () { return preloadImage(directImage); });
-                        return;
-                    }
-
-                    queueImagePreload(function () {
-                        return loadFallbackCategoryImage(child)
-                            .then(function (url) { return preloadImage(url); });
-                    });
-                });
-            });
+    function loadMobileDrawerImages() {
+        if (state.mobileImagesLoaded) return;
+        const drawer = getMobileDrawer();
+        if (!drawer) return;
+        state.mobileImagesLoaded = true;
+        drawer.querySelectorAll(".preis-lando-mobile-tile").forEach(function (a) {
+            const category = a._plCategory;
+            const img = a.querySelector(".preis-lando-mobile-tile-image");
+            const wrap = a.querySelector(".preis-lando-mobile-tile-image-wrap");
+            if (category && img && !img.src) setImageForElement(img, category, wrap);
         });
-    }
-
-    /* =====================================================
-       MOBILE DRAWER – DIALOG / TOP LAYER
-       Liegt technisch immer vor Header, Banner und Shopinhalt.
-       ===================================================== */
-
-    function getMobileDialog() {
-        return document.querySelector(".preis-lando-mobile-drawer");
     }
 
     function setMobileButtonState(open) {
@@ -828,1294 +557,344 @@
         });
     }
 
-    function closeMobileDrawer() {
-        document.documentElement.classList.remove("preis-lando-mobile-menu-open");
-        document.body.classList.remove("preis-lando-mobile-menu-open");
-
-        const dialog = getMobileDialog();
-        if (dialog) {
-            dialog.classList.remove("is-open");
-            dialog.setAttribute("aria-hidden", "true");
-        }
-
-        setMobileButtonState(false);
-    }
-
     function openMobileDrawer() {
-        if (isHoverMode()) return;
-
-        const dialog = getMobileDialog();
-        if (!dialog) return;
-
-        dialog.setAttribute("aria-hidden", "false");
-
-        /* v1.4.15: exakt die mobil live getestete Drawer-Geometrie.
-           Drawer beginnt direkt unter der sichtbaren Suche. */
-        const searchBox =
-            document.querySelector(".always-visible-search .position-relative") ||
-            document.querySelector(".always-visible-search");
-        const panel = dialog.querySelector(".preis-lando-mobile-drawer-panel");
-        const bottom = searchBox
-            ? Math.max(0, Math.round(searchBox.getBoundingClientRect().bottom))
-            : 100;
-
-        dialog.style.setProperty("position", "fixed", "important");
-        dialog.style.setProperty("inset", "auto 0 0 0", "important");
-        dialog.style.setProperty("top", bottom + "px", "important");
-        dialog.style.setProperty("bottom", "0", "important");
-        dialog.style.setProperty("height", "calc(100dvh - " + bottom + "px)", "important");
-        dialog.style.setProperty("padding-top", "0", "important");
-
-        if (panel) {
-            panel.style.setProperty("position", "absolute", "important");
-            panel.style.setProperty("inset", "0", "important");
-            panel.style.setProperty("height", "100%", "important");
-        }
-
-        requestAnimationFrame(function () {
-            dialog.classList.add("is-open");
-        });
-
+        if (window.innerWidth >= BREAKPOINT) return;
+        const drawer = getMobileDrawer();
+        if (!drawer) return;
+        loadMobileDrawerImages();
+        drawer.classList.add("is-open");
+        drawer.setAttribute("aria-hidden", "false");
         document.documentElement.classList.add("preis-lando-mobile-menu-open");
         document.body.classList.add("preis-lando-mobile-menu-open");
         setMobileButtonState(true);
     }
 
-    function toggleMobileDrawer() {
-        const dialog = getMobileDialog();
-        if (!dialog) return;
-        if (dialog.classList.contains("is-open")) closeMobileDrawer();
-        else openMobileDrawer();
+    function closeMobileDrawer() {
+        const drawer = getMobileDrawer();
+        if (drawer) { drawer.classList.remove("is-open"); drawer.setAttribute("aria-hidden", "true"); }
+        document.documentElement.classList.remove("preis-lando-mobile-menu-open");
+        if (document.body) document.body.classList.remove("preis-lando-mobile-menu-open");
+        setMobileButtonState(false);
     }
 
-    function buildMobileDrawer(categories) {
-        if (!Array.isArray(categories) || !categories.length) return;
-
-        let dialog = getMobileDialog();
-        if (!dialog) {
-            dialog = document.createElement("div");
-            dialog.className = "preis-lando-mobile-drawer";
-            dialog.setAttribute("role", "dialog");
-            dialog.setAttribute("aria-modal", "true");
-            dialog.setAttribute("aria-hidden", "true");
-            dialog.setAttribute("aria-label", "Kategorien");
-
-            const panel = document.createElement("div");
-            panel.className = "preis-lando-mobile-drawer-panel";
-            const list = document.createElement("div");
-            list.className = "preis-lando-mobile-drawer-list preis-lando-mobile-tile-grid";
-            panel.appendChild(list);
-            dialog.appendChild(panel);
-            document.body.appendChild(dialog);
-            dialog.addEventListener("click", function (event) {
-                if (event.target === dialog) closeMobileDrawer();
-            });
-        }
-
-        const list = dialog.querySelector(".preis-lando-mobile-drawer-list");
-        if (!list || list.dataset.ready === "1") return;
-
-        categories.forEach(function (category) {
-            if (!category || !category.id) return;
-            const card = document.createElement("a");
-            card.className = "preis-lando-mobile-tile";
-            card.href = getCategoryUrl(category);
-
-            const name = document.createElement("span");
-            name.className = "preis-lando-mobile-tile-name";
-            name.textContent = getCategoryName(category);
-
-            const imageWrap = document.createElement("span");
-            imageWrap.className = "preis-lando-mobile-tile-image-wrap";
-            const image = document.createElement("img");
-            image.className = "preis-lando-mobile-tile-image";
-            image.alt = "";
-            image.loading = "lazy";
-            imageWrap.appendChild(image);
-
-            card.appendChild(name);
-            card.appendChild(imageWrap);
-            list.appendChild(card);
-
-            const directImage = getCategoryImage(category);
-            if (directImage) {
-                image.src = directImage;
-            } else {
-                loadFallbackCategoryImage(category).then(function (url) {
-                    if (url) image.src = url;
-                    else imageWrap.classList.add("is-empty");
-                }).catch(function () {
-                    imageWrap.classList.add("is-empty");
-                });
-            }
-        });
-        list.dataset.ready = "1";
-    }
-
-    function ensureMobileMenuButton() {
-        let button = document.querySelector(".kategorie-mobile-button");
-        let topBar = document.querySelector(".preis-lando-topbar") || findTopBarHost(getHeaderScope());
-
-        if (topBar && !topBar.classList.contains("preis-lando-topbar")) {
-            topBar.classList.add("preis-lando-topbar", "preis-lando-auto-topbar");
-        }
-
-        let host = topBar && (
-            topBar.querySelector(".top-bar-items") ||
-            topBar.querySelector(":scope > .widget-inner") ||
-            topBar
-        );
-
-        /* Letzter Fallback fuer Unterseiten: plentyShop rendert die Top-Bar
-           dort teilweise in einer anderen Huelle. */
-        if (!host) {
-            host = document.querySelector("#page-header-parent .top-bar-items, #page-header .top-bar-items, .top-bar-items");
-            if (host) {
-                topBar = host.parentElement || host;
-                if (!topBar.classList.contains("preis-lando-topbar")) {
-                    topBar.classList.add("preis-lando-topbar", "preis-lando-auto-topbar");
-                }
-            }
-        }
-
-        if (!button && host) {
-            button = document.createElement("button");
-            button.type = "button";
-            button.className = "kategorie-mobile-button";
-            button.setAttribute("aria-label", "Kategorien öffnen");
-            button.setAttribute("aria-expanded", "false");
-            button.innerHTML = "<span>Kategorien</span>";
-            host.insertBefore(button, host.firstChild);
-        }
-
-        if (!button) return null;
-
-        /* Mobil muss der Button in der sichtbaren Top Bar liegen –
-           niemals in der ausgeblendeten Kategorienavigation. */
-        if (window.innerWidth < 768 && host && button.parentNode !== host) {
-            host.insertBefore(button, host.firstChild);
-        }
-
-        if (button.dataset.preisLandoDirectDrawer !== "1") {
-            button.dataset.preisLandoDirectDrawer = "1";
-
-            /* Capture: verhindert Doppel-Toggle durch ältere CustomJS-Handler. */
-            button.addEventListener("click", function (event) {
-                if (window.innerWidth >= 768) return;
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                toggleMobileDrawer();
-            }, true);
-        }
-
-        return button;
-    }
-
-    /* =====================================================
-       v1.4.20 – HEADER-KLASSEN AUF ALLEN SEITENTYPEN
-
-       Hintergrund:
-       Die PreisLando-CSS-Klassen wurden im ShopBuilder ursprünglich
-       am Startseiten-Header vergeben. Auf Kategorie-, Artikel- und
-       Content-Seiten kann plentyShop LTS denselben Header mit einer
-       anderen Widget-Hülle rendern. Das zentrale CSS ist dort zwar
-       geladen, die Selektoren .preis-lando-logo / -topbar greifen
-       dann aber nicht. Ergebnis: großes Logo / Standard-Header.
-
-       Diese Routine erkennt die vorhandenen plentyShop-Header-Elemente
-       und ergänzt NUR fehlende Klassen. Bestehende Startseiten-Klassen
-       werden nicht verändert oder verschoben.
-       ===================================================== */
-
-    function commonAncestorElement(a, b) {
-        if (!a || !b) return null;
-        const seen = new Set();
-        let current = a;
-        while (current) {
-            seen.add(current);
-            current = current.parentElement;
-        }
-        current = b;
-        while (current) {
-            if (seen.has(current)) return current;
-            current = current.parentElement;
-        }
-        return null;
-    }
-
-    function getHeaderScope() {
-        return document.querySelector("#page-header-parent") ||
-            document.querySelector("#page-header") ||
-            document.querySelector(".header-container") ||
-            document.querySelector("header") ||
-            document;
-    }
-
-    function findPreisLandoLogoImage(scope) {
-        if (!scope || !scope.querySelectorAll) return null;
-
-        const images = Array.from(scope.querySelectorAll("img"));
-        let best = null;
-        let bestScore = -1;
-
-        images.forEach(function (img) {
-            const src = String(img.currentSrc || img.src || img.getAttribute("src") || "").toLowerCase();
-            const alt = String(img.getAttribute("alt") || "").toLowerCase();
-            const title = String(img.getAttribute("title") || "").toLowerCase();
-            const haystack = src + " " + alt + " " + title;
-
-            /* Icons, Zahlungslogos und Produktbilder möglichst ausschließen. */
-            let score = 0;
-            if (haystack.indexOf("preislando") !== -1) score += 120;
-            if (haystack.indexOf("preis-lando") !== -1) score += 120;
-            if (haystack.indexOf("logo") !== -1) score += 45;
-            if (haystack.indexOf("preis") !== -1 && haystack.indexOf("lando") !== -1) score += 80;
-            if (img.closest(".widget-image-box")) score += 20;
-
-            const width = img.naturalWidth || img.width || 0;
-            const height = img.naturalHeight || img.height || 0;
-            if (width >= 120 && height >= 25 && width > height) score += 12;
-            if (width <= 64 && height <= 64) score -= 50;
-
-            if (score > bestScore) {
-                bestScore = score;
-                best = img;
-            }
-        });
-
-        return bestScore >= 30 ? best : null;
-    }
-
-    function findTopBarHost(scope) {
-        const existing = document.querySelector(".preis-lando-topbar");
-        if (existing) return existing;
-
-        if (!scope || !scope.querySelector) return null;
-
-        const topItems = scope.querySelector(".top-bar-items") ||
-            document.querySelector("#page-header-parent .top-bar-items, #page-header .top-bar-items, .top-bar-items");
-        if (topItems) {
-            /* Klasse absichtlich auf eine Hülle setzen, damit bestehende
-               Selektoren '.preis-lando-topbar .top-bar-items' greifen. */
-            return topItems.parentElement || topItems;
-        }
-
-        const search = scope.querySelector(".always-visible-search") ||
-            document.querySelector("#page-header-parent .always-visible-search, #page-header .always-visible-search, .always-visible-search");
-        const controls = scope.querySelector(".controls, .controls-list") ||
-            document.querySelector("#page-header-parent .controls, #page-header .controls, .controls, .controls-list");
-        if (search && controls) {
-            const common = commonAncestorElement(search, controls);
-            if (common && common !== document.body && common !== document.documentElement) {
-                return common;
-            }
-        }
-
-        return null;
-    }
-
-    function findNavigationHost(rootLink) {
-        const headerScope = getStrictHeaderScope();
-        const existing = headerScope ? headerScope.querySelector(".preis-lando-navigation") : null;
-        if (existing) return existing;
-        if (!rootLink || (headerScope && !headerScope.contains(rootLink))) return null;
-
-        let current = rootLink.parentElement;
-        let fallback = null;
-        while (current && current !== document.body) {
-            if (current.matches && current.matches("nav, .main-navbar-collapsable, .widget-navigation-tree, .widget-navigation")) {
-                fallback = current;
-                if (current.parentElement && current.parentElement !== document.body) {
-                    return current.parentElement;
-                }
-                return current;
-            }
-            if (!fallback && current.querySelector && current.querySelector(".main-navbar-collapsable")) {
-                fallback = current;
-            }
-            current = current.parentElement;
-        }
-        return fallback;
-    }
-
-    function ensureGlobalPreisLandoHeaderClasses() {
-        const scope = getHeaderScope();
-
-        /* Logo: nur ergänzen, wenn der ShopBuilder die Klasse auf diesem
-           Seitentyp nicht bereits mitliefert. */
-        let logoHost = document.querySelector(".preis-lando-logo");
-        if (!logoHost) {
-            const logoImage = findPreisLandoLogoImage(scope);
-            if (logoImage) {
-                logoHost = logoImage.closest(".widget-image-box") ||
-                    logoImage.closest("[class*='widget-image']") ||
-                    logoImage.parentElement;
-                if (logoHost) {
-                    logoHost.classList.add("preis-lando-logo", "preis-lando-auto-logo");
-                }
-            }
-        }
-
-        let topBarHost = findTopBarHost(scope);
-        if (topBarHost && !topBarHost.classList.contains("preis-lando-topbar")) {
-            topBarHost.classList.add("preis-lando-topbar", "preis-lando-auto-topbar");
-        }
-
-        const rootLink = findRootLink();
-        const navigationHost = findNavigationHost(rootLink);
-        if (navigationHost && !navigationHost.classList.contains("preis-lando-navigation")) {
-            navigationHost.classList.add("preis-lando-navigation", "preis-lando-auto-navigation");
-        }
-
-        /* Gemeinsame Header-Zeile nur dann ergänzen, wenn ein kompakter
-           gemeinsamer Vorfahr vorhanden ist. Dadurch fassen wir nicht den
-           kompletten page-header-parent als Flex-Zeile an. */
-        if (!document.querySelector(".header-logo-suche") && logoHost && topBarHost) {
-            const row = commonAncestorElement(logoHost, topBarHost);
-            if (row &&
-                row !== document.body &&
-                row !== document.documentElement &&
-                row.id !== "page-header-parent") {
-                const rect = row.getBoundingClientRect();
-                if (!rect.height || rect.height < 240) {
-                    row.classList.add("header-logo-suche", "preis-lando-auto-header-row");
-                }
-            }
-        }
-
-        /* Mobile-Regeln erwarten diese Kennzeichnung an der Top Bar. */
-        if (topBarHost) {
-            topBarHost.classList.toggle("preis-lando-mobile-header", window.innerWidth < HOVER_BREAKPOINT);
-        }
-    }
-
-    /* =====================================================
-       v1.4.27 – EINZIGE HEADER-ANORDNUNG
-
-       Diese Logik ersetzt das fruehere CustomJS im Plugin
-       "Custom CSS/JS im Frontend". Sie wird bei echten Reloads
-       UND bei internen plentyShop-Routen erneut ausgefuehrt.
-       ===================================================== */
-
-    const originalHeaderPositions = new WeakMap();
-
-    function rememberHeaderPosition(element) {
-        if (!element || !element.parentNode || originalHeaderPositions.has(element)) return;
-        originalHeaderPositions.set(element, {
-            parent: element.parentNode,
-            next: element.nextSibling
-        });
-    }
-
-    function restoreHeaderPosition(element) {
-        if (!element) return;
-        const saved = originalHeaderPositions.get(element);
-        if (!saved || !saved.parent || !saved.parent.isConnected) return;
-        if (element.parentNode === saved.parent && element.nextSibling === saved.next) return;
-        if (saved.next && saved.next.parentNode === saved.parent) {
-            saved.parent.insertBefore(element, saved.next);
-        } else {
-            saved.parent.appendChild(element);
-        }
-    }
-
-    function syncPreisLandoHeaderLayout() {
-        const scope = getHeaderScope();
-        let topBar = document.querySelector(".preis-lando-topbar") || findTopBarHost(scope);
-        if (!topBar) return;
-
-        if (!topBar.classList.contains("preis-lando-topbar")) {
-            topBar.classList.add("preis-lando-topbar", "preis-lando-auto-topbar");
-        }
-
-        const host = topBar.querySelector(".top-bar-items") ||
-            topBar.querySelector(":scope > .widget-inner") ||
-            topBar;
-
-        const logo = document.querySelector(".preis-lando-logo");
-        const controls = topBar.querySelector(".controls") ||
-            document.querySelector("#page-header-parent .controls, #page-header .controls, .controls");
-        const search = topBar.querySelector(".always-visible-search") ||
-            document.querySelector("#page-header-parent .always-visible-search, #page-header .always-visible-search, .always-visible-search");
-        const button = ensureMobileMenuButton();
-        const mobile = window.innerWidth < HOVER_BREAKPOINT;
-
-        if (mobile) {
-            rememberHeaderPosition(logo);
-            rememberHeaderPosition(search);
-
-            if (button && button.parentNode !== host) {
-                host.insertBefore(button, host.firstChild);
-            }
-
-            if (logo && logo.parentNode !== host) {
-                if (controls && controls.parentNode === host) {
-                    host.insertBefore(logo, controls);
-                } else if (button && button.parentNode === host) {
-                    button.insertAdjacentElement("afterend", logo);
-                } else {
-                    host.appendChild(logo);
-                }
-            }
-
-            if (search && search.parentNode !== host) {
-                host.appendChild(search);
-            }
-
-            if (search) search.classList.add("preis-lando-mobile-search");
-            topBar.classList.add("preis-lando-mobile-header");
-
-            requestAnimationFrame(function () {
-                requestAnimationFrame(function () {
-                    const headerRect = topBar.getBoundingClientRect();
-                    const searchBox = search
-                        ? (search.querySelector(".position-relative") || search)
-                        : topBar;
-                    const searchRect = searchBox.getBoundingClientRect();
-                    const headerHeight = Math.ceil(headerRect.height);
-                    const drawerTop = Math.max(0, Math.ceil(searchRect.bottom));
-                    if (headerHeight > 0) {
-                        document.documentElement.style.setProperty("--pl-mobile-header-height", headerHeight + "px");
-                    }
-                    if (drawerTop > 0) {
-                        document.documentElement.style.setProperty("--pl-mobile-drawer-top", drawerTop + "px");
-                    }
-                });
-            });
-        } else {
-            if (search) {
-                search.classList.remove("preis-lando-mobile-search");
-                restoreHeaderPosition(search);
-            }
-            restoreHeaderPosition(logo);
-            topBar.classList.remove("preis-lando-mobile-header");
-            closeMobileDrawer();
-        }
-    }
-
-    /* =====================================================
-       INITIALISIERUNG
-       ===================================================== */
-
-    function initializeHoverNavigation() {
-        ensureGlobalPreisLandoHeaderClasses();
-        syncPreisLandoHeaderLayout();
-        const rootLink = findRootLink();
+    function initNavigation(parts) {
+        const rootLink = parts && parts.rootLink ? parts.rootLink : findRootLink();
         if (!rootLink) return;
 
-        loadRootCategories().then(function (categories) {
-            if (!Array.isArray(categories) || !categories.length) {
-                document.documentElement.classList.remove("preis-lando-nav-ready");
-                window.setTimeout(scheduleInitialize, 900);
-                return;
-            }
+        let immediate = state.rootCategories && state.rootCategories.length ? state.rootCategories : readRootCache();
+        if (!immediate || immediate.length < 3) immediate = extractDomCategories(rootLink);
+        if (immediate && immediate.length >= 3) {
+            if (!state.rootCategories && immediate.some(function (c) { return c.id; })) state.rootCategories = immediate;
+            renderNavigation(rootLink, immediate);
+            buildMobileDrawer(immediate);
+        }
 
-            const topList = buildPromotedNavigation(rootLink, categories);
-            if (!topList) {
-                document.documentElement.classList.remove("preis-lando-nav-ready");
-                window.setTimeout(scheduleInitialize, 500);
-                return;
-            }
-
-            document.documentElement.classList.add("preis-lando-nav-ready");
-            buildMobileDrawer(categories);
-            ensureMobileMenuButton();
-
-            if (!isHoverMode()) {
-                closeAllHoverMenus();
-                return;
-            }
-
-            if (topList.dataset.preisLandoPreloadStarted !== "1") {
-                topList.dataset.preisLandoPreloadStarted = "1";
-                setTimeout(function () {
-                    preloadHoverImages(categories);
-                }, 1500);
-            }
+        loadOfficialRootCategories().then(function (official) {
+            if (!official || official.length < 3) return;
+            const currentRoot = findRootLink();
+            if (!currentRoot) return;
+            renderNavigation(currentRoot, official);
+            buildMobileDrawer(official);
         });
     }
 
-    function scheduleInitialize() {
-        clearTimeout(initializeTimer);
-        initializeTimer = setTimeout(initializeHoverNavigation, 80);
+    function getIdsFromAutocompleteUrl(url) {
+        if (!url) return null;
+        const match = String(url).split("?")[0].replace(/\/+$/, "").match(/_(\d+)_(\d+)$/);
+        return match ? { itemId: parseInt(match[1], 10), variationId: parseInt(match[2], 10) } : null;
     }
 
-    function start() {
-        ensureGlobalPreisLandoHeaderClasses();
-        ensureMobileMenuButton();
-        syncPreisLandoHeaderLayout();
-        initializeHoverNavigation();
+    function loadVariationPrice(ids) {
+        const key = ids.itemId + "_" + ids.variationId;
+        if (state.priceCache.has(key)) return Promise.resolve(state.priceCache.get(key));
+        if (state.priceRequests.has(key)) return state.priceRequests.get(key);
+        const request = fetch("/rest/preislando/search-price/" + encodeURIComponent(ids.variationId), {
+            credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" }
+        }).then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+          .then(function (data) { const p = data && data.success && data.price ? data.price : ""; state.priceCache.set(key, p); return p; })
+          .catch(function () { return ""; })
+          .finally(function () { state.priceRequests.delete(key); });
+        state.priceRequests.set(key, request);
+        return request;
+    }
 
-        const observer = new MutationObserver(function () {
-            const headerScope = getStrictHeaderScope();
-            if (headerScope && !headerScope.querySelector(".preis-lando-nav-category")) {
-                document.documentElement.classList.remove("preis-lando-nav-ready");
+    function enhanceAutocomplete() {
+        document.querySelectorAll(".autocomplete-suggestions a.autocomplete-suggestion:not([data-pl-price-ready])").forEach(function (link) {
+            const ids = getIdsFromAutocompleteUrl(link.getAttribute("href"));
+            if (!ids) return;
+            link.setAttribute("data-pl-price-ready", "1");
+            const span = document.createElement("span");
+            span.className = "preis-lando-search-price";
+            link.appendChild(span);
+            loadVariationPrice(ids).then(function (price) { if (price && span.isConnected) span.textContent = price; });
+        });
+    }
+
+    function exactText(selector, text) {
+        return Array.from(document.querySelectorAll(selector)).find(function (el) {
+            return (el.textContent || "").replace(/\s+/g, " ").trim().toUpperCase() === text.toUpperCase();
+        }) || null;
+    }
+
+    function enhanceCurrentPage() {
+        let cartTitle = document.querySelector(".pl-cart-title");
+        if (!cartTitle) {
+            cartTitle = exactText("h1,h2,h3,h4", "WARENKORB");
+            if (cartTitle) {
+                cartTitle.classList.add("pl-cart-title");
+                if (cartTitle.parentElement) cartTitle.parentElement.classList.add("pl-cart-title-bar");
             }
-            ensureGlobalPreisLandoHeaderClasses();
-            syncPreisLandoHeaderLayout();
-            scheduleInitialize();
-        });
+        }
 
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
+        if (cartTitle && !document.querySelector(".pl-cart-checkout-button")) {
+            const checkout = exactText("a,button", "KASSE");
+            if (checkout) checkout.classList.add("pl-cart-checkout-button");
+        }
 
-        /* plentyShop LTS wechselt einige Seiten ohne klassischen Voll-Reload.
-           Mehrere kurze Nachpruefungen sorgen dafuer, dass Navigation und
-           Mobile-Button auch nach einem internen Route-Wechsel sofort wieder
-           aufgebaut werden und kein manuelles Aktualisieren noetig ist. */
-        let lastKnownUrl = window.location.href;
-        function refreshAfterRouteChange() {
-            /* Sofort wieder in den No-Flash-Zustand wechseln, bevor plentyShop
-               den alten Header fuer die neue Route sichtbar machen kann. */
-            document.documentElement.classList.remove("preis-lando-nav-ready");
-            [0, 60, 160, 360, 700, 1200].forEach(function (delay) {
-                window.setTimeout(function () {
-                    ensureGlobalPreisLandoHeaderClasses();
-                    ensureMobileMenuButton();
-                    syncPreisLandoHeaderLayout();
-                    initializeHoverNavigation();
-                }, delay);
+        if (cartTitle && !document.querySelector(".pl-cart-lower-panel-v2")) {
+            const land = exactText("main p,main span,main div,main td,main th", "Lieferland");
+            const sum = exactText("main p,main span,main div,main td,main th", "Summe");
+            const parent = commonAncestor(land, sum);
+            if (parent && parent !== document.body) parent.classList.add("pl-cart-lower-panel-v2");
+        }
+
+        if (!document.querySelector(".pl-product-main-box")) {
+            const cartButton = Array.from(document.querySelectorAll("a,button")).find(function (el) {
+                return (el.textContent || "").toUpperCase().indexOf("IN DEN WARENKORB") !== -1;
+            });
+            if (cartButton) {
+                const image = Array.from(document.querySelectorAll("img")).find(function (img) {
+                    const r = img.getBoundingClientRect();
+                    return r.width > 180 && r.height > 180 && r.top > 0;
+                });
+                const parent = commonAncestor(image, cartButton);
+                if (parent && parent !== document.body) parent.classList.add("pl-product-main-box");
+            }
+        }
+    }
+
+    /* =====================================================
+       Barrierefreiheit: gezielte Skalierung, keine DOM-Vollscan-
+       Schleife bei jeder Mutation.
+       ===================================================== */
+    const a11y = (function () {
+        const STORAGE_KEY = "preislandoAccessibilityV2";
+        const ROOT_ID = "pl-a11y-root";
+        const DEFAULTS = { font: "normal", contrast: false, grayscale: false, links: false, motion: false };
+        const SCALE = { normal: 1, large: 1.25, xlarge: 1.50 };
+        const TEXT_SELECTOR = "p,a,span,li,label,button,input,textarea,select,option,td,th,h1,h2,h3,h4,h5,h6,small,strong,em,div";
+        let settings = Object.assign({}, DEFAULTS);
+        let lastFocused = null;
+
+        function read() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+                if (saved && typeof saved === "object") settings = Object.assign({}, DEFAULTS, saved);
+            } catch (error) {}
+            if (!["normal", "large", "xlarge"].includes(settings.font)) settings.font = "normal";
+        }
+        function save() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(settings)); } catch (error) {} }
+
+        function isTextElement(el) {
+            if (!el || !el.matches || !el.matches(TEXT_SELECTOR)) return false;
+            if (el.closest("#" + ROOT_ID + ", #pl-chess-easter")) return false;
+            if (el.matches("script,style,svg,path,use,i,.fa,[class*='fa-'],.material-icons,.material-symbols-outlined")) return false;
+            if (el.tagName === "DIV" && el.children.length > 0) return false;
+            const style = getComputedStyle(el);
+            const size = parseFloat(style.fontSize);
+            return style.display !== "none" && style.visibility !== "hidden" && Number.isFinite(size) && size >= 8 && size <= 72;
+        }
+
+        function rememberAndScale(el, scale) {
+            if (!isTextElement(el)) return;
+            if (!el.hasAttribute("data-pl-a11y-base")) {
+                const computed = parseFloat(getComputedStyle(el).fontSize);
+                el.setAttribute("data-pl-a11y-base", String(computed));
+                el.setAttribute("data-pl-a11y-inline", el.style.getPropertyValue("font-size") || "");
+                el.setAttribute("data-pl-a11y-priority", el.style.getPropertyPriority("font-size") || "");
+            }
+            const base = parseFloat(el.getAttribute("data-pl-a11y-base"));
+            if (Number.isFinite(base)) el.style.setProperty("font-size", Math.min(86, base * scale).toFixed(2) + "px", "important");
+        }
+
+        function scaleRoot(root) {
+            const scale = SCALE[settings.font] || 1;
+            if (scale === 1 || !root) return;
+            if (root.nodeType === 1) rememberAndScale(root, scale);
+            if (root.querySelectorAll) root.querySelectorAll(TEXT_SELECTOR).forEach(function (el) { rememberAndScale(el, scale); });
+        }
+
+        function restoreAll() {
+            document.querySelectorAll("[data-pl-a11y-base]").forEach(function (el) {
+                const value = el.getAttribute("data-pl-a11y-inline") || "";
+                const priority = el.getAttribute("data-pl-a11y-priority") || "";
+                if (value) el.style.setProperty("font-size", value, priority);
+                else el.style.removeProperty("font-size");
+                el.removeAttribute("data-pl-a11y-base");
+                el.removeAttribute("data-pl-a11y-inline");
+                el.removeAttribute("data-pl-a11y-priority");
             });
         }
 
-        window.addEventListener("popstate", refreshAfterRouteChange);
-        window.addEventListener("hashchange", refreshAfterRouteChange);
-        window.addEventListener("pageshow", refreshAfterRouteChange);
+        function applyFont() {
+            restoreAll();
+            if (settings.font !== "normal") scaleRoot(document.body);
+        }
 
+        function updateControls() {
+            const root = document.getElementById(ROOT_ID);
+            if (!root) return;
+            root.querySelectorAll("[data-pl-a11y-font]").forEach(function (b) {
+                const active = b.getAttribute("data-pl-a11y-font") === settings.font;
+                b.classList.toggle("is-active", active); b.setAttribute("aria-pressed", active ? "true" : "false");
+            });
+            ["contrast", "grayscale", "links", "motion"].forEach(function (key) {
+                const b = root.querySelector('[data-pl-a11y-toggle="' + key + '"]');
+                if (b) { b.classList.toggle("is-active", !!settings[key]); b.setAttribute("aria-pressed", settings[key] ? "true" : "false"); }
+            });
+        }
+
+        function apply() {
+            const html = document.documentElement;
+            html.setAttribute("data-pl-a11y-contrast", settings.contrast ? "on" : "off");
+            html.setAttribute("data-pl-a11y-grayscale", settings.grayscale ? "on" : "off");
+            html.setAttribute("data-pl-a11y-links", settings.links ? "on" : "off");
+            html.setAttribute("data-pl-a11y-motion", settings.motion ? "reduced" : "normal");
+            html.setAttribute("data-pl-a11y-font", settings.font);
+            updateControls();
+            applyFont();
+        }
+
+        function build() {
+            if (!document.body || document.getElementById(ROOT_ID)) return;
+            const root = document.createElement("div");
+            root.id = ROOT_ID;
+            root.className = "pl-a11y";
+            root.innerHTML = '' +
+                '<button type="button" class="pl-a11y__trigger" aria-label="Barrierefreiheit öffnen" aria-expanded="false"><span class="pl-a11y__trigger-icon" aria-hidden="true">♿</span><span class="pl-a11y__trigger-text">Barrierefreiheit</span></button>' +
+                '<section id="pl-a11y-panel" class="pl-a11y__panel" role="dialog" aria-labelledby="pl-a11y-title" hidden>' +
+                    '<div class="pl-a11y__head"><div><strong id="pl-a11y-title">Barrierefreiheit</strong><span>Darstellung anpassen</span></div><button type="button" class="pl-a11y__close" aria-label="Menü schließen"><span>×</span></button></div>' +
+                    '<div class="pl-a11y__content">' +
+                        '<div class="pl-a11y__group"><div class="pl-a11y__label">Schriftgröße</div><div class="pl-a11y__font-buttons"><button class="pl-a11y__control" data-pl-a11y-font="normal">A</button><button class="pl-a11y__control" data-pl-a11y-font="large">A+</button><button class="pl-a11y__control" data-pl-a11y-font="xlarge">A++</button></div></div>' +
+                        '<div class="pl-a11y__group pl-a11y__toggle-list"><button class="pl-a11y__control" data-pl-a11y-toggle="contrast">◐ Kontrast erhöhen</button><button class="pl-a11y__control" data-pl-a11y-toggle="grayscale">◑ Graustufen</button><button class="pl-a11y__control" data-pl-a11y-toggle="links">↗ Links hervorheben</button><button class="pl-a11y__control" data-pl-a11y-toggle="motion">◫ Animationen reduzieren</button></div>' +
+                        '<div class="pl-a11y__actions"><button class="pl-a11y__reset">↺ Zurücksetzen</button><a class="pl-a11y__declaration" href="/declaration-of-accessibility">Barrierefreiheitserklärung</a></div>' +
+                        '<p class="pl-a11y__hint">Die Auswahl wird nur in diesem Browser gespeichert.</p>' +
+                    '</div>' +
+                '</section>';
+            document.body.appendChild(root);
+
+            const trigger = root.querySelector(".pl-a11y__trigger");
+            const panel = root.querySelector(".pl-a11y__panel");
+            const close = root.querySelector(".pl-a11y__close");
+            function open() { lastFocused = document.activeElement; panel.hidden = false; root.classList.add("is-open"); trigger.setAttribute("aria-expanded", "true"); close.focus(); }
+            function shut() { panel.hidden = true; root.classList.remove("is-open"); trigger.setAttribute("aria-expanded", "false"); if (lastFocused && lastFocused.focus) lastFocused.focus(); }
+            trigger.addEventListener("click", function () { panel.hidden ? open() : shut(); });
+            close.addEventListener("click", shut);
+            root.addEventListener("click", function (event) {
+                const font = event.target.closest("[data-pl-a11y-font]");
+                if (font) { settings.font = font.getAttribute("data-pl-a11y-font"); save(); apply(); return; }
+                const toggle = event.target.closest("[data-pl-a11y-toggle]");
+                if (toggle) { const key = toggle.getAttribute("data-pl-a11y-toggle"); settings[key] = !settings[key]; save(); apply(); return; }
+                if (event.target.closest(".pl-a11y__reset")) { settings = Object.assign({}, DEFAULTS); save(); apply(); }
+            });
+            document.addEventListener("keydown", function (event) { if (event.key === "Escape" && !panel.hidden) shut(); });
+            document.addEventListener("pointerdown", function (event) { if (!panel.hidden && !root.contains(event.target)) shut(); });
+            updateControls();
+        }
+
+        function refresh(mutations) {
+            build();
+            if (settings.font === "normal" || !mutations) return;
+            mutations.forEach(function (m) {
+                Array.from(m.addedNodes || []).forEach(function (node) { if (node.nodeType === 1) scaleRoot(node); });
+            });
+        }
+
+        read();
+        return { build: build, apply: apply, refresh: refresh };
+    })();
+
+    registerRefresh(function (mutations) { a11y.refresh(mutations); });
+
+    function refreshAll(mutations) {
+        const parts = ensureHeaderClasses();
+        syncHeaderLayout(parts);
+        initNavigation(parts);
+        enhanceAutocomplete();
+        enhanceCurrentPage();
+        refreshHooks.forEach(function (fn) {
+            try { fn(mutations); } catch (error) { console.warn("[PreisLando] Refresh-Modul", error); }
+        });
+    }
+
+    function scheduleRefresh(mutations) {
+        clearTimeout(state.refreshTimer);
+        state.refreshTimer = setTimeout(function () { refreshAll(mutations || null); }, 45);
+    }
+
+    function installRouteSignals() {
+        ["pushState", "replaceState"].forEach(function (name) {
+            const original = history[name];
+            if (!original || original.__plWrapped) return;
+            function wrapped() {
+                const result = original.apply(this, arguments);
+                window.dispatchEvent(new Event("preislando:route"));
+                return result;
+            }
+            wrapped.__plWrapped = true;
+            history[name] = wrapped;
+        });
+        window.addEventListener("popstate", function () { window.dispatchEvent(new Event("preislando:route")); });
+        window.addEventListener("preislando:route", function () {
+            state.routeHref = window.location.href;
+            closeHoverMenu();
+            closeMobileDrawer();
+            scheduleRefresh(null);
+        });
+    }
+
+    function installGlobalEvents() {
         document.addEventListener("click", function (event) {
-            const link = event.target && event.target.closest
-                ? event.target.closest("a[href]")
-                : null;
-            if (!link) return;
-            try {
-                const targetUrl = new URL(link.href, window.location.href);
-                if (targetUrl.origin === window.location.origin) {
-                    window.setTimeout(function () {
-                        if (window.location.href !== lastKnownUrl) {
-                            lastKnownUrl = window.location.href;
-                            refreshAfterRouteChange();
-                        } else {
-                            /* Auch Router, die URL und DOM zeitversetzt aendern. */
-                            refreshAfterRouteChange();
-                        }
-                    }, 60);
-                }
-            } catch (error) {}
+            const mobileButton = event.target.closest && event.target.closest(".kategorie-mobile-button");
+            if (mobileButton && window.innerWidth < BREAKPOINT) {
+                event.preventDefault();
+                const drawer = getMobileDrawer();
+                if (drawer && drawer.classList.contains("is-open")) closeMobileDrawer(); else openMobileDrawer();
+                return;
+            }
+            const drawer = getMobileDrawer();
+            if (drawer && event.target === drawer) closeMobileDrawer();
         }, true);
 
-        window.setInterval(function () {
-            if (window.location.href !== lastKnownUrl) {
-                lastKnownUrl = window.location.href;
-                refreshAfterRouteChange();
-            }
-        }, 400);
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape") { closeHoverMenu(); closeMobileDrawer(); }
+        });
 
         let resizeTimer = null;
         window.addEventListener("resize", function () {
             clearTimeout(resizeTimer);
-            resizeTimer = setTimeout(function () {
-                ensureGlobalPreisLandoHeaderClasses();
-                syncPreisLandoHeaderLayout();
-                initializeHoverNavigation();
-                if (!isHoverMode()) {
-                    closeAllHoverMenus();
-                } else {
-                    closeMobileDrawer();
-                }
-            }, 100);
+            resizeTimer = setTimeout(function () { refreshAll(null); }, 100);
         });
     }
 
-    if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", start);
-    } else {
-        start();
+    function boot() {
+        a11y.build();
+        a11y.apply();
+        installRouteSignals();
+        installGlobalEvents();
+        refreshAll(null);
+
+        state.observer = new MutationObserver(function (mutations) {
+            scheduleRefresh(mutations);
+        });
+        state.observer.observe(document.body, { childList: true, subtree: true });
+
+        console.info("[PreisLandoHoverNavigation] Clean Rebuild " + VERSION + " geladen");
     }
 
-    /* =====================================================
-       PREISLANDO SCHNELLSUCHE – PREISE
-       ===================================================== */
-
-    (function setupAutocompletePrices() {
-        const priceCache = {};
-        const pendingPrices = {};
-
-        function getIdsFromAutocompleteUrl(url) {
-            if (!url) return null;
-
-            const cleanUrl = String(url)
-                .split("?")[0]
-                .replace(/\/+$/, "");
-
-            const match = cleanUrl.match(/_(\d+)_(\d+)$/);
-            if (!match) return null;
-
-            return {
-                itemId: parseInt(match[1], 10),
-                variationId: parseInt(match[2], 10)
-            };
-        }
-
-        function loadVariationPrice(itemId, variationId) {
-            const cacheKey = itemId + "_" + variationId;
-
-            if (Object.prototype.hasOwnProperty.call(priceCache, cacheKey)) {
-                return Promise.resolve(priceCache[cacheKey]);
-            }
-
-            if (pendingPrices[cacheKey]) return pendingPrices[cacheKey];
-
-            const url = "/rest/preislando/search-price/" + encodeURIComponent(variationId);
-
-            pendingPrices[cacheKey] = fetch(url, {
-                credentials: "same-origin",
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            })
-                .then(function (response) {
-                    if (!response.ok) throw new Error("Preis HTTP " + response.status);
-                    return response.json();
-                })
-                .then(function (data) {
-                    const price = data && data.success && data.price ? data.price : "";
-                    priceCache[cacheKey] = price;
-                    return price;
-                })
-                .catch(function (error) {
-                    console.warn(
-                        "PreisLando Schnellsuche: Preis konnte nicht geladen werden",
-                        itemId,
-                        variationId,
-                        error
-                    );
-                    priceCache[cacheKey] = "";
-                    return "";
-                })
-                .finally(function () {
-                    delete pendingPrices[cacheKey];
-                });
-
-            return pendingPrices[cacheKey];
-        }
-
-        function getOrCreatePriceElement(link) {
-            let price = link.querySelector(":scope > .preis-lando-search-price");
-            if (price) return price;
-
-            price = document.createElement("span");
-            price.className = "preis-lando-search-price";
-            link.appendChild(price);
-            return price;
-        }
-
-        function prepareAutocompleteItem(link) {
-            if (link.dataset.preisLandoPriceReady === "1") return;
-
-            const ids = getIdsFromAutocompleteUrl(link.getAttribute("href"));
-            if (!ids) return;
-
-            link.dataset.preisLandoPriceReady = "1";
-            const priceElement = getOrCreatePriceElement(link);
-            priceElement.textContent = "";
-
-            loadVariationPrice(ids.itemId, ids.variationId).then(function (price) {
-                if (price) priceElement.textContent = price;
-            });
-        }
-
-        function initializeAutocompletePrices() {
-            document.querySelectorAll(
-                ".autocomplete-suggestions a.autocomplete-suggestion"
-            ).forEach(prepareAutocompleteItem);
-        }
-
-        const autocompleteObserver = new MutationObserver(initializeAutocompletePrices);
-        autocompleteObserver.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        initializeAutocompletePrices();
-    })();
 
     /* =====================================================
-       PREISLANDO WARENKORB-STYLING v1.4.17.6
-       Klassen werden anhand der tatsächlich sichtbaren Texte gesetzt.
-       Dadurch bleibt das Styling unabhängig von Plenty-internen
-       Basket-Klassennamen.
-       ===================================================== */
-    (function setupPreisLandoCartStyling() {
-        let applyTimer = null;
-
-        function normalizeText(element) {
-            return element && element.textContent
-                ? element.textContent.trim().toUpperCase()
-                : "";
-        }
-
-        function findLeafText(text) {
-            return Array.from(document.querySelectorAll("*")).find(function (element) {
-                return element.children.length === 0 &&
-                    element.textContent &&
-                    element.textContent.trim() === text;
-            }) || null;
-        }
-
-        function commonAncestor(a, b) {
-            if (!a || !b) return null;
-
-            const parents = [];
-            let current = a;
-
-            while (current) {
-                parents.push(current);
-                current = current.parentElement;
-            }
-
-            current = b;
-
-            while (current) {
-                if (parents.indexOf(current) !== -1) return current;
-                current = current.parentElement;
-            }
-
-            return null;
-        }
-
-        function applyCartStyling() {
-            const cartTitle = Array.from(
-                document.querySelectorAll("h1,h2,h3,h4")
-            ).find(function (element) {
-                return normalizeText(element) === "WARENKORB";
-            });
-
-            if (cartTitle) {
-                cartTitle.classList.add("pl-cart-title");
-
-                let bar = cartTitle.parentElement;
-                while (bar && bar !== document.body) {
-                    const bg = window.getComputedStyle(bar).backgroundColor;
-                    if (
-                        bg &&
-                        bg !== "rgba(0, 0, 0, 0)" &&
-                        bg !== "transparent"
-                    ) {
-                        break;
-                    }
-                    bar = bar.parentElement;
-                }
-
-                if (bar && bar !== document.body) {
-                    bar.classList.add("pl-cart-title-bar");
-                }
-            }
-
-            Array.from(document.querySelectorAll("a,button")).forEach(function (element) {
-                if (normalizeText(element) === "KASSE") {
-                    element.classList.add("pl-cart-checkout-button");
-                }
-            });
-
-            const land = findLeafText("Lieferland");
-            const summe = findLeafText("Summe");
-            const lowerPanel = commonAncestor(land, summe);
-
-            if (lowerPanel && lowerPanel !== document.body) {
-                lowerPanel.classList.add("pl-cart-lower-panel");
-            }
-        }
-
-        function scheduleApply() {
-            clearTimeout(applyTimer);
-            applyTimer = setTimeout(applyCartStyling, 50);
-        }
-
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", applyCartStyling);
-        } else {
-            applyCartStyling();
-        }
-
-        const observer = new MutationObserver(scheduleApply);
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-    })();
-
-    /* =====================================================
-       PREISLANDO WARENKORB + ARTIKELDETAIL v1.4.17.7
-       Bestätigter F12-Test:
-       - Warenkorb-Unterteil weiß
-       - Artikeldetail-Hauptbereich weiß
-       - Weitere Details per CSS (PreisLandoStyle.twig)
-       ===================================================== */
-    (function setupPreisLandoProductAndCartPanels() {
-        let timer = null;
-
-        function exactText(text) {
-            const hits = Array.from(document.querySelectorAll("body *"))
-                .filter(function (el) {
-                    return el.textContent && el.textContent.trim() === text;
-                })
-                .sort(function (a, b) {
-                    return a.getBoundingClientRect().width - b.getBoundingClientRect().width;
-                });
-
-            return hits[0] || null;
-        }
-
-        function commonParent(a, b) {
-            if (!a || !b) return null;
-
-            const parents = [];
-            let x = a;
-
-            while (x) {
-                parents.push(x);
-                x = x.parentElement;
-            }
-
-            x = b;
-
-            while (x) {
-                if (parents.indexOf(x) !== -1) return x;
-                x = x.parentElement;
-            }
-
-            return null;
-        }
-
-        function applyPanels() {
-            /* -------------------------------------------------
-               Warenkorb: Lieferland + Summe gemeinsamer Weißblock
-               ------------------------------------------------- */
-            const land = exactText("Lieferland");
-            const summe = exactText("Summe");
-
-            let lower = commonParent(land, summe);
-
-            if (lower) {
-                while (
-                    lower.parentElement &&
-                    lower.parentElement !== document.body &&
-                    lower.getBoundingClientRect().width < 600
-                ) {
-                    lower = lower.parentElement;
-                }
-
-                if (lower && lower !== document.body) {
-                    lower.classList.add("pl-cart-lower-panel-v2");
-                }
-            }
-
-            /* -------------------------------------------------
-               Artikeldetail: Produktbild + Kaufbox als Weißblock
-               ------------------------------------------------- */
-            const cartButton = Array.from(document.querySelectorAll("a,button"))
-                .find(function (el) {
-                    return el.textContent &&
-                        el.textContent.trim().toUpperCase().includes("IN DEN WARENKORB");
-                });
-
-            if (cartButton) {
-                const imgs = Array.from(document.querySelectorAll("img"))
-                    .filter(function (img) {
-                        const r = img.getBoundingClientRect();
-                        return (
-                            r.width > 150 &&
-                            r.height > 150 &&
-                            r.top > 50 &&
-                            r.top < window.innerHeight
-                        );
-                    })
-                    .sort(function (a, b) {
-                        const ra = a.getBoundingClientRect();
-                        const rb = b.getBoundingClientRect();
-                        return (rb.width * rb.height) - (ra.width * ra.height);
-                    });
-
-                const mainImage = imgs[0];
-                let productBox = commonParent(mainImage, cartButton);
-
-                if (productBox) {
-                    while (
-                        productBox.parentElement &&
-                        productBox.parentElement !== document.body &&
-                        productBox.getBoundingClientRect().width < 650
-                    ) {
-                        productBox = productBox.parentElement;
-                    }
-
-                    if (productBox && productBox !== document.body) {
-                        productBox.classList.add("pl-product-main-box");
-                    }
-                }
-            }
-        }
-
-        function schedule() {
-            clearTimeout(timer);
-            timer = setTimeout(applyPanels, 60);
-        }
-
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", applyPanels);
-        } else {
-            applyPanels();
-        }
-
-        const observer = new MutationObserver(schedule);
-        observer.observe(document.body, {
-            childList: true,
-            subtree: true
-        });
-
-        window.addEventListener("resize", schedule);
-    })();
-
-    /* =====================================================
-       PREISLANDO BARRIEREFREIHEITS-WERKZEUGE v1.4.18.0
-       - schwebender, tastaturbedienbarer Button
-       - Schriftgroesse (100 / 112,5 / 125 %)
-       - Kontrast, Graustufen, Links hervorheben
-       - Animationen reduzieren
-       - Einstellungen lokal im Browser speichern
-       ===================================================== */
-    (function setupPreisLandoAccessibilityTools() {
-        const STORAGE_KEY = "preislandoAccessibilityV1";
-        const ROOT_ID = "pl-a11y-root";
-        const HTML = document.documentElement;
-        const DEFAULTS = {
-            font: "normal",
-            contrast: false,
-            grayscale: false,
-            links: false,
-            motion: false
-        };
-
-        let settings = Object.assign({}, DEFAULTS);
-        let lastFocusedElement = null;
-        let fontScaleTimer = null;
-
-        const FONT_SCALE = {
-            normal: 1,
-            large: 1.25,
-            xlarge: 1.50
-        };
-
-        function restoreScaledFonts() {
-            if (!document.body) return;
-            document.body.querySelectorAll('[data-pl-a11y-scaled="1"]').forEach(function (el) {
-                const original = el.getAttribute("data-pl-a11y-original-font-size");
-                const priority = el.getAttribute("data-pl-a11y-original-font-priority") || "";
-                if (original) el.style.setProperty("font-size", original, priority);
-                else el.style.removeProperty("font-size");
-                el.removeAttribute("data-pl-a11y-scaled");
-                el.removeAttribute("data-pl-a11y-original-font-size");
-                el.removeAttribute("data-pl-a11y-original-font-priority");
-            });
-        }
-
-        function shouldScaleFont(el) {
-            if (!el || !el.matches) return false;
-            if (el.closest("#" + ROOT_ID + ", #pl-chess-easter")) return false;
-            if (el.matches("script, style, svg, path, use, i, .fa, [class*='fa-'], .material-icons, .material-symbols-outlined")) return false;
-            const style = window.getComputedStyle(el);
-            if (style.display === "none" || style.visibility === "hidden") return false;
-            const px = parseFloat(style.fontSize);
-            return Number.isFinite(px) && px >= 8 && px <= 64;
-        }
-
-        function applyFontScale() {
-            if (!document.body) return;
-            restoreScaledFonts();
-
-            const scale = FONT_SCALE[settings.font] || 1;
-            if (scale === 1) return;
-
-            const selector = "p,a,span,li,label,button,input,textarea,select,option,td,th,h1,h2,h3,h4,h5,h6,small,strong,em,div";
-            document.body.querySelectorAll(selector).forEach(function (el) {
-                if (!shouldScaleFont(el)) return;
-
-                const computed = parseFloat(window.getComputedStyle(el).fontSize);
-                if (!Number.isFinite(computed)) return;
-
-                el.setAttribute("data-pl-a11y-original-font-size", el.style.getPropertyValue("font-size") || "");
-                el.setAttribute("data-pl-a11y-original-font-priority", el.style.getPropertyPriority("font-size") || "");
-                el.setAttribute("data-pl-a11y-scaled", "1");
-                el.style.setProperty("font-size", Math.min(72, computed * scale).toFixed(2) + "px", "important");
-            });
-        }
-
-        function scheduleFontScale() {
-            window.clearTimeout(fontScaleTimer);
-            fontScaleTimer = window.setTimeout(applyFontScale, 90);
-        }
-
-        function readSettings() {
-            try {
-                const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "null");
-                if (saved && typeof saved === "object") {
-                    settings.font = ["normal", "large", "xlarge"].indexOf(saved.font) !== -1
-                        ? saved.font
-                        : DEFAULTS.font;
-                    settings.contrast = saved.contrast === true;
-                    settings.grayscale = saved.grayscale === true;
-                    settings.links = saved.links === true;
-                    settings.motion = saved.motion === true;
-                }
-            } catch (error) {
-                settings = Object.assign({}, DEFAULTS);
-            }
-        }
-
-        function saveSettings() {
-            try {
-                window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-            } catch (error) {
-                /* localStorage darf z. B. im privaten Modus blockiert sein. */
-            }
-        }
-
-        function applySettings() {
-            HTML.setAttribute("data-pl-a11y-font", settings.font);
-            HTML.setAttribute("data-pl-a11y-contrast", settings.contrast ? "on" : "off");
-            HTML.setAttribute("data-pl-a11y-grayscale", settings.grayscale ? "on" : "off");
-            HTML.setAttribute("data-pl-a11y-links", settings.links ? "on" : "off");
-            HTML.setAttribute("data-pl-a11y-motion", settings.motion ? "reduced" : "normal");
-            updateControls();
-            scheduleFontScale();
-        }
-
-        function getRoot() {
-            return document.getElementById(ROOT_ID);
-        }
-
-        function setPressed(selector, value) {
-            const el = document.querySelector(selector);
-            if (!el) return;
-            el.setAttribute("aria-pressed", value ? "true" : "false");
-            el.classList.toggle("is-active", !!value);
-        }
-
-        function updateControls() {
-            const root = getRoot();
-            if (!root) return;
-
-            root.querySelectorAll("[data-pl-a11y-font]").forEach(function (button) {
-                const active = button.getAttribute("data-pl-a11y-font") === settings.font;
-                button.setAttribute("aria-pressed", active ? "true" : "false");
-                button.classList.toggle("is-active", active);
-            });
-
-            setPressed('[data-pl-a11y-toggle="contrast"]', settings.contrast);
-            setPressed('[data-pl-a11y-toggle="grayscale"]', settings.grayscale);
-            setPressed('[data-pl-a11y-toggle="links"]', settings.links);
-            setPressed('[data-pl-a11y-toggle="motion"]', settings.motion);
-        }
-
-        function createButton(text, label, attrs) {
-            const button = document.createElement("button");
-            button.type = "button";
-            button.className = "pl-a11y__control";
-            button.textContent = text;
-            button.setAttribute("aria-label", label);
-            button.setAttribute("aria-pressed", "false");
-            Object.keys(attrs || {}).forEach(function (name) {
-                button.setAttribute(name, attrs[name]);
-            });
-            return button;
-        }
-
-        function buildRoot() {
-            if (!document.body || getRoot()) return;
-
-            const root = document.createElement("div");
-            root.id = ROOT_ID;
-            root.className = "pl-a11y";
-
-            const trigger = document.createElement("button");
-            trigger.type = "button";
-            trigger.className = "pl-a11y__trigger";
-            trigger.setAttribute("aria-label", "Barrierefreiheit öffnen");
-            trigger.setAttribute("aria-haspopup", "dialog");
-            trigger.setAttribute("aria-controls", "pl-a11y-panel");
-            trigger.setAttribute("aria-expanded", "false");
-            trigger.innerHTML = '<span class="pl-a11y__trigger-icon" aria-hidden="true">♿</span><span class="pl-a11y__trigger-text">Barrierefreiheit</span>';
-
-            const panel = document.createElement("section");
-            panel.id = "pl-a11y-panel";
-            panel.className = "pl-a11y__panel";
-            panel.setAttribute("role", "dialog");
-            panel.setAttribute("aria-modal", "false");
-            panel.setAttribute("aria-labelledby", "pl-a11y-title");
-            panel.hidden = true;
-
-            const head = document.createElement("div");
-            head.className = "pl-a11y__head";
-            head.innerHTML = '<div><strong id="pl-a11y-title">Barrierefreiheit</strong><span>Darstellung anpassen</span></div>';
-
-            const close = document.createElement("button");
-            close.type = "button";
-            close.className = "pl-a11y__close";
-            close.setAttribute("aria-label", "Barrierefreiheitsmenü schließen");
-            close.innerHTML = '<span aria-hidden="true">×</span>';
-            head.appendChild(close);
-
-            const content = document.createElement("div");
-            content.className = "pl-a11y__content";
-
-            const fontGroup = document.createElement("div");
-            fontGroup.className = "pl-a11y__group";
-            fontGroup.innerHTML = '<div class="pl-a11y__label">Schriftgröße</div>';
-
-            const fontButtons = document.createElement("div");
-            fontButtons.className = "pl-a11y__font-buttons";
-            fontButtons.appendChild(createButton("A", "Normale Schriftgröße", {"data-pl-a11y-font": "normal"}));
-            fontButtons.appendChild(createButton("A+", "Größere Schrift", {"data-pl-a11y-font": "large"}));
-            fontButtons.appendChild(createButton("A++", "Sehr große Schrift", {"data-pl-a11y-font": "xlarge"}));
-            fontGroup.appendChild(fontButtons);
-            content.appendChild(fontGroup);
-
-            const toggleGroup = document.createElement("div");
-            toggleGroup.className = "pl-a11y__group pl-a11y__toggle-list";
-
-            [
-                ["contrast", "◐", "Kontrast erhöhen"],
-                ["grayscale", "◑", "Graustufen"],
-                ["links", "↗", "Links hervorheben"],
-                ["motion", "◫", "Animationen reduzieren"]
-            ].forEach(function (entry) {
-                const btn = createButton(entry[1] + "  " + entry[2], entry[2], {"data-pl-a11y-toggle": entry[0]});
-                toggleGroup.appendChild(btn);
-            });
-            content.appendChild(toggleGroup);
-
-            const actions = document.createElement("div");
-            actions.className = "pl-a11y__actions";
-
-            const reset = document.createElement("button");
-            reset.type = "button";
-            reset.className = "pl-a11y__reset";
-            reset.setAttribute("data-pl-a11y-reset", "true");
-            reset.textContent = "↺ Zurücksetzen";
-            actions.appendChild(reset);
-
-            const declaration = document.createElement("a");
-            declaration.className = "pl-a11y__declaration";
-            declaration.href = "/declaration-of-accessibility";
-            declaration.textContent = "Barrierefreiheitserklärung";
-            actions.appendChild(declaration);
-            content.appendChild(actions);
-
-            const hint = document.createElement("p");
-            hint.className = "pl-a11y__hint";
-            hint.textContent = "Die Auswahl wird nur in diesem Browser gespeichert.";
-            content.appendChild(hint);
-
-            panel.appendChild(head);
-            panel.appendChild(content);
-            root.appendChild(trigger);
-            root.appendChild(panel);
-            document.body.appendChild(root);
-
-            function openPanel() {
-                lastFocusedElement = document.activeElement;
-                panel.hidden = false;
-                root.classList.add("is-open");
-                trigger.setAttribute("aria-expanded", "true");
-                window.requestAnimationFrame(function () {
-                    close.focus();
-                });
-            }
-
-            function closePanel(restoreFocus) {
-                panel.hidden = true;
-                root.classList.remove("is-open");
-                trigger.setAttribute("aria-expanded", "false");
-                if (restoreFocus && lastFocusedElement && typeof lastFocusedElement.focus === "function") {
-                    lastFocusedElement.focus();
-                }
-            }
-
-            trigger.addEventListener("click", function () {
-                if (panel.hidden) openPanel();
-                else closePanel(true);
-            });
-
-            close.addEventListener("click", function () {
-                closePanel(true);
-            });
-
-            fontButtons.addEventListener("click", function (event) {
-                const button = event.target.closest("[data-pl-a11y-font]");
-                if (!button) return;
-                settings.font = button.getAttribute("data-pl-a11y-font") || "normal";
-                saveSettings();
-                applySettings();
-            });
-
-            toggleGroup.addEventListener("click", function (event) {
-                const button = event.target.closest("[data-pl-a11y-toggle]");
-                if (!button) return;
-                const key = button.getAttribute("data-pl-a11y-toggle");
-                if (!Object.prototype.hasOwnProperty.call(settings, key)) return;
-                settings[key] = !settings[key];
-                saveSettings();
-                applySettings();
-            });
-
-            reset.addEventListener("click", function () {
-                settings = Object.assign({}, DEFAULTS);
-                saveSettings();
-                applySettings();
-            });
-
-            document.addEventListener("keydown", function (event) {
-                if (event.key === "Escape" && !panel.hidden) {
-                    event.preventDefault();
-                    closePanel(true);
-                }
-            });
-
-            document.addEventListener("pointerdown", function (event) {
-                if (!panel.hidden && !root.contains(event.target)) {
-                    closePanel(false);
-                }
-            });
-
-            applySettings();
-        }
-
-        readSettings();
-        applySettings();
-
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", buildRoot, { once: true });
-        } else {
-            buildRoot();
-        }
-
-        /* Neu geladene Kategorie-/Artikelseiten erhalten die gewaehlte
-           Schriftgroesse automatisch, ohne die Navigation zu beeinflussen. */
-        if (document.body) {
-            const fontObserver = new MutationObserver(function (mutations) {
-                if (settings.font === "normal") return;
-                if (mutations.some(function (m) { return m.addedNodes && m.addedNodes.length; })) {
-                    scheduleFontScale();
-                }
-            });
-            fontObserver.observe(document.body, { childList: true, subtree: true });
-        }
-    })();
-
-    /* =====================================================
-       PREISLANDO SCHACH-EASTER-EGG v1.4.19.0
-       Versteckter Start: Klick auf das "b" in "GmbH" im Footer.
-       Der restliche Footer-Link behaelt sein normales Hover-Verhalten.
-       Gewinn: 10%-Gutschein (Code unten konfigurierbar).
+       SCHACH-EASTER-EGG – isoliertes Modul
        ===================================================== */
     (function setupPreisLandoChessEasterEgg() {
         const ROOT_ID = "pl-chess-easter";
@@ -2132,7 +911,6 @@
         let selected = null;
         let aiTimer = null;
         let lastFocusedElement = null;
-        let observer = null;
 
         function initialState() {
             return {
@@ -2797,22 +1575,15 @@
             return true;
         }
 
-        function start() {
+        function refreshChessTrigger() {
             buildModal();
             installFooterTrigger();
-            if (observer) observer.disconnect();
-            observer = new MutationObserver(function () {
-                installFooterTrigger();
-            });
-            observer.observe(document.documentElement, { childList: true, subtree: true });
         }
 
-        if (document.readyState === "loading") {
-            document.addEventListener("DOMContentLoaded", start, { once: true });
-        } else {
-            start();
-        }
+        registerRefresh(refreshChessTrigger);
     })();
+
+    onReady(boot);
 
 })();
 </script>

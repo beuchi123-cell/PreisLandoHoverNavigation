@@ -17,10 +17,12 @@
     const HOVER_OPEN_DELAY = 120;
     const HOVER_CLOSE_DELAY = 350;
     const IMAGE_PRELOAD_CONCURRENCY = 4;
+    const ROOT_CACHE_KEY = "preislando.rootCategories.v1427";
+    const ROOT_CACHE_TTL = 15 * 60 * 1000;
     
-    window.PreisLandoHoverVersion = "1.4.26.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.26.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.26.0 geladen");
+    window.PreisLandoHoverVersion = "1.4.27.0";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.27.0");
+    console.info("[PreisLandoHoverNavigation] v1.4.27.0 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
@@ -136,16 +138,50 @@
         return childRequests[categoryId];
     }
 
+    function readRootCategoryCache() {
+        try {
+            const raw = window.sessionStorage.getItem(ROOT_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            if (!parsed || !Array.isArray(parsed.categories) || !parsed.categories.length) return null;
+            if (!parsed.savedAt || Date.now() - parsed.savedAt > ROOT_CACHE_TTL) {
+                window.sessionStorage.removeItem(ROOT_CACHE_KEY);
+                return null;
+            }
+            return parsed.categories;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    function writeRootCategoryCache(categories) {
+        if (!Array.isArray(categories) || categories.length < 3) return;
+        try {
+            window.sessionStorage.setItem(ROOT_CACHE_KEY, JSON.stringify({
+                savedAt: Date.now(),
+                categories: categories
+            }));
+        } catch (error) {}
+    }
+
     function loadRootCategories() {
-        /* v1.4.26: Kein Session-Cache fuer leere/fehlgeschlagene Antworten.
-           Genau so konnte vorher ein einziger zu frueher API-Aufruf die
-           Navigation fuer den Rest der Sitzung leer halten. */
+        /* v1.4.27: Nur GUELTIGE, nicht-leere Antworten werden gecacht.
+           Auf Folgeseiten steht die Hauptnavigation dadurch sofort zur
+           Verfuegung; ein leerer/zu frueher API-Call kann den Cache nie
+           vergiften. */
         if (Array.isArray(childCache[ROOT_CATEGORY_ID]) && childCache[ROOT_CATEGORY_ID].length) {
             return Promise.resolve(childCache[ROOT_CATEGORY_ID]);
         }
+
+        const cached = readRootCategoryCache();
+        if (cached && cached.length) {
+            childCache[ROOT_CATEGORY_ID] = cached;
+            return Promise.resolve(cached);
+        }
+
         if (rootCategoriesPromise) return rootCategoriesPromise;
 
-        const retryDelays = [0, 180, 500, 1100, 2200];
+        const retryDelays = [0, 120, 320, 700, 1400];
 
         function attempt(index) {
             const delay = retryDelays[index] || 0;
@@ -158,6 +194,7 @@
             }).then(function (categories) {
                 if (Array.isArray(categories) && categories.length) {
                     childCache[ROOT_CATEGORY_ID] = categories;
+                    writeRootCategoryCache(categories);
                     return categories;
                 }
 
@@ -177,11 +214,7 @@
         }
 
         rootCategoriesPromise = attempt(0).then(function (categories) {
-            if (!categories.length) {
-                /* Wichtig: leeres Ergebnis NICHT festhalten. Der Mutation-/Route-
-                   Observer darf beim naechsten Durchlauf erneut anfragen. */
-                rootCategoriesPromise = null;
-            }
+            rootCategoriesPromise = null;
             return categories;
         });
 
@@ -291,8 +324,23 @@
        STANDARDNAVIGATION FINDEN
        ===================================================== */
 
+    function getStrictHeaderScope() {
+        return document.querySelector("#page-header-parent") ||
+            document.querySelector("#page-header") ||
+            document.querySelector(".header-container") ||
+            document.querySelector("header") ||
+            null;
+    }
+
     function findRootLink() {
-        const preferred = document.querySelector(".preis-lando-navigation");
+        /* v1.4.27: Ausschliesslich im HEADER suchen. Auf Kategorie-Seiten
+           existiert dieselbe Root-Kategorie auch im linken Kategoriebaum.
+           Die fruehere Dokument-Suche konnte deshalb den SIDEBAR-Baum als
+           Shopnavigation markieren und das echte Kopfmenue stehen lassen. */
+        const headerScope = getStrictHeaderScope();
+        if (!headerScope || !headerScope.querySelectorAll) return null;
+
+        const preferred = headerScope.querySelector(".preis-lando-navigation");
 
         function findIn(scope) {
             if (!scope || !scope.querySelectorAll) return null;
@@ -307,10 +355,7 @@
             }) || null;
         }
 
-        /* Bei plentyShop-Seitenwechseln kann die bereits markierte Navigation
-           kurzzeitig noch auf die alte DOM-Huelle zeigen. Deshalb bei einem
-           Trefferfehler immer noch einmal im gesamten Dokument suchen. */
-        return findIn(preferred) || findIn(document);
+        return findIn(preferred) || findIn(headerScope);
     }
 
     function findTopList(rootLink) {
@@ -1070,9 +1115,10 @@
     }
 
     function findNavigationHost(rootLink) {
-        const existing = document.querySelector(".preis-lando-navigation");
+        const headerScope = getStrictHeaderScope();
+        const existing = headerScope ? headerScope.querySelector(".preis-lando-navigation") : null;
         if (existing) return existing;
-        if (!rootLink) return null;
+        if (!rootLink || (headerScope && !headerScope.contains(rootLink))) return null;
 
         let current = rootLink.parentElement;
         let fallback = null;
@@ -1144,7 +1190,7 @@
     }
 
     /* =====================================================
-       v1.4.26 – EINZIGE HEADER-ANORDNUNG
+       v1.4.27 – EINZIGE HEADER-ANORDNUNG
 
        Diese Logik ersetzt das fruehere CustomJS im Plugin
        "Custom CSS/JS im Frontend". Sie wird bei echten Reloads
@@ -1301,6 +1347,10 @@
         initializeHoverNavigation();
 
         const observer = new MutationObserver(function () {
+            const headerScope = getStrictHeaderScope();
+            if (headerScope && !headerScope.querySelector(".preis-lando-nav-category")) {
+                document.documentElement.classList.remove("preis-lando-nav-ready");
+            }
             ensureGlobalPreisLandoHeaderClasses();
             syncPreisLandoHeaderLayout();
             scheduleInitialize();
@@ -1317,7 +1367,10 @@
            aufgebaut werden und kein manuelles Aktualisieren noetig ist. */
         let lastKnownUrl = window.location.href;
         function refreshAfterRouteChange() {
-            [0, 80, 220, 500, 1000, 1800].forEach(function (delay) {
+            /* Sofort wieder in den No-Flash-Zustand wechseln, bevor plentyShop
+               den alten Header fuer die neue Route sichtbar machen kann. */
+            document.documentElement.classList.remove("preis-lando-nav-ready");
+            [0, 60, 160, 360, 700, 1200].forEach(function (delay) {
                 window.setTimeout(function () {
                     ensureGlobalPreisLandoHeaderClasses();
                     ensureMobileMenuButton();

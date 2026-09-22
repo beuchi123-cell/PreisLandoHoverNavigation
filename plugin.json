@@ -2,9 +2,9 @@
   "name": "PreisLandoHoverNavigation",
   "namespace": "PreisLandoHoverNavigation",
   "type": "theme",
-  "version": "1.4.22.0",
+  "version": "1.4.23.0",
   "license": "MIT",
-  "description": "PreisLando Navigation + Shop-CSS; globale Header-Klassen; Barrierefreiheits-Werkzeuge rechts; Schach-Easter-Egg; Fix fuer Schriftgroesse und ausfallsichere Initialisierung",
+  "description": "PreisLando Navigation + zentrales Shop-CSS; Barrierefreiheits-Werkzeuge rechts; Schach-Easter-Egg; stabile Basis 1.4.20 mit reinem Layout-Fix",
   "author": "PreisLando",
   "keywords": [
     "plentyShop LTS",

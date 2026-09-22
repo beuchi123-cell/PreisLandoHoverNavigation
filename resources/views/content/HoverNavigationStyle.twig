@@ -1,7 +1,7 @@
 <style>
 /* =========================================================
    PREISLANDO – ZENTRALES PLUGIN-CSS
-   Plugin 1.4.23.0 ALLCSS
+   Plugin 1.4.24.0 ALLCSS
    ShopBuilder-Custom-CSS kann nach erfolgreichem Test geleert werden.
    ========================================================= */
 
@@ -4550,22 +4550,22 @@ html[data-pl-a11y-font="normal"] {
 }
 
 html[data-pl-a11y-font="large"] {
-    font-size: 112.5% !important;
-}
-
-html[data-pl-a11y-font="xlarge"] {
     font-size: 125% !important;
 }
 
-html[data-pl-a11y-grayscale="on"] body {
+html[data-pl-a11y-font="xlarge"] {
+    font-size: 150% !important;
+}
+
+html[data-pl-a11y-grayscale="on"] body > *:not(#pl-a11y-root):not(#pl-chess-easter) {
     filter: grayscale(1);
 }
 
-html[data-pl-a11y-contrast="on"] body {
+html[data-pl-a11y-contrast="on"] body > *:not(#pl-a11y-root):not(#pl-chess-easter) {
     filter: contrast(1.28);
 }
 
-html[data-pl-a11y-grayscale="on"][data-pl-a11y-contrast="on"] body {
+html[data-pl-a11y-grayscale="on"][data-pl-a11y-contrast="on"] body > *:not(#pl-a11y-root):not(#pl-chess-easter) {
     filter: grayscale(1) contrast(1.28);
 }
 
@@ -5308,6 +5308,113 @@ html.pl-chess-open body {
         max-width: 80px !important;
         max-height: 38px !important;
         object-fit: contain !important;
+    }
+}
+
+/* =========================================================
+   PREISLANDO v1.4.24 – ROUTE/MOBILE/FOOTER/A11Y FINAL OVERRIDES
+   ========================================================= */
+
+/* Barrierefreiheit bleibt wirklich viewport-fest – auch beim Scrollen. */
+.pl-a11y {
+    position: fixed !important;
+    right: 18px !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: 18px !important;
+    z-index: 2147483005 !important;
+}
+.pl-a11y__panel {
+    position: fixed !important;
+    right: 18px !important;
+    left: auto !important;
+    top: auto !important;
+    bottom: 78px !important;
+    z-index: 2147483006 !important;
+}
+
+/* Mobile-Menueknopf im Header immer sichtbar, auch wenn Plenty auf
+   Unterseiten eine leicht andere Header-Huelle rendert. */
+@media (max-width: 767.98px) {
+    .kategorie-mobile-button,
+    .preis-lando-topbar .kategorie-mobile-button {
+        display: flex !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        border: 0 !important;
+        background: transparent !important;
+        color: #333 !important;
+        position: relative !important;
+        z-index: 50 !important;
+    }
+
+    .kategorie-mobile-button > span { display: none !important; }
+    .kategorie-mobile-button::before {
+        content: "☰" !important;
+        display: block !important;
+        font-size: 25px !important;
+        line-height: 26px !important;
+        color: #333 !important;
+    }
+    .kategorie-mobile-button::after {
+        content: "Kategorien" !important;
+        display: block !important;
+        margin-top: 2px !important;
+        font-size: 10px !important;
+        line-height: 12px !important;
+        color: #333 !important;
+    }
+    .kategorie-mobile-button.is-open::before { content: "×" !important; font-size: 30px !important; }
+    .kategorie-mobile-button.is-open::after { content: "Schließen" !important; }
+
+    /* Footer auf schmalen Displays nicht mehr in drei gequetschte Spalten. */
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) {
+        padding: 14px 18px 8px !important;
+    }
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-four-col {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr) !important;
+        gap: 0 !important;
+        width: 100% !important;
+    }
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-four-col > .widget-inner,
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-four-col > .widget-inner:nth-child(1),
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-four-col > .widget-inner:nth-child(2),
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-four-col > .widget-inner:nth-child(3),
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-four-col > .widget-inner:nth-child(4) {
+        display: block !important;
+        width: 100% !important;
+        max-width: none !important;
+        flex: 0 0 100% !important;
+        margin: 0 0 14px !important;
+        padding: 0 !important;
+        min-width: 0 !important;
+    }
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-four-col > .widget-inner:first-child {
+        margin-bottom: 18px !important;
+    }
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-link-list .h4,
+    .widget.widget-grid.widget-two-col.row.mb-3.d-flex.text-center:has(a[href="/kontakt/"]):has(a[href="/agb/"]):has(a[href="/ueber-uns/"]) .widget-link-list a {
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: normal !important;
+    }
+
+    .pl-a11y {
+        right: 10px !important;
+        left: auto !important;
+        bottom: 10px !important;
+    }
+    .pl-a11y__panel {
+        right: 10px !important;
+        left: 10px !important;
+        bottom: 68px !important;
+        width: auto !important;
+        max-height: calc(100dvh - 86px) !important;
     }
 }
 </style>

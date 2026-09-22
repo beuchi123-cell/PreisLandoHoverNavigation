@@ -1,7 +1,7 @@
 <style>
 /* =========================================================
    PREISLANDO – ZENTRALES PLUGIN-CSS
-   Plugin 1.4.21.0 ALLCSS
+   Plugin 1.4.23.0 ALLCSS
    ShopBuilder-Custom-CSS kann nach erfolgreichem Test geleert werden.
    ========================================================= */
 
@@ -4545,13 +4545,16 @@ html {
    ========================================================= */
 
 /* Einstellungen auf der Seite */
-/* Die sichtbare Schriftvergrößerung wird per JavaScript auf echte
-   Textelemente angewendet. Das funktioniert auch bei Shop-CSS, das
-   Schriftgrößen fest in px und mit !important vorgibt. */
-html[data-pl-a11y-font="normal"],
-html[data-pl-a11y-font="large"],
+html[data-pl-a11y-font="normal"] {
+    font-size: 100% !important;
+}
+
+html[data-pl-a11y-font="large"] {
+    font-size: 112.5% !important;
+}
+
 html[data-pl-a11y-font="xlarge"] {
-    --pl-a11y-font-mode: 1;
+    font-size: 125% !important;
 }
 
 html[data-pl-a11y-grayscale="on"] body {
@@ -4853,14 +4856,6 @@ body :focus-visible {
         animation: none !important;
     }
 }
-
-/* v1.4.21: Menü bleibt immer vollständig im sichtbaren Viewport und
-   öffnet sich vom Button aus nach oben. */
-.pl-a11y.is-open .pl-a11y__panel {
-    right: max(10px, env(safe-area-inset-right));
-    bottom: max(78px, calc(env(safe-area-inset-bottom) + 68px));
-}
-
 
 /* =========================================================
    PREISLANDO SCHACH-EASTER-EGG v1.4.19.0

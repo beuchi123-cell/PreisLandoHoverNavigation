@@ -1,9 +1,20 @@
 <style>
 /* =========================================================
    PREISLANDO – ZENTRALES PLUGIN-CSS
-   Plugin 1.4.24.0 ALLCSS
+   Plugin 1.4.25.0 SINGLE SOURCE
    ShopBuilder-Custom-CSS kann nach erfolgreichem Test geleert werden.
    ========================================================= */
+
+
+/* Kritisch: die alte Plenty-Root-Kategorie sofort ausblenden, noch bevor
+   JavaScript die 10 PreisLando-Hauptkategorien hochzieht. Verhindert das
+   kurze Aufblitzen des alten Menues beim Seitenwechsel. */
+#page-header-parent li:has(> a[href$="/neuetischkultur-sw5"]),
+#page-header-parent li:has(> a[href*="/neuetischkultur-sw5?"]),
+#page-header li:has(> a[href$="/neuetischkultur-sw5"]),
+#page-header li:has(> a[href*="/neuetischkultur-sw5?"]) {
+    display: none !important;
+}
 
 /* =========================================================
    PREISLANDO GRID-NAVIGATION + GEMEINSAMES HOVER-FELD
@@ -5417,4 +5428,19 @@ html.pl-chess-open body {
         max-height: calc(100dvh - 86px) !important;
     }
 }
+
+/* =========================================================
+   v1.4.25 – Ticket-Hintergruende jetzt ebenfalls zentral.
+   Custom CSS kann damit komplett leer bleiben.
+   ========================================================= */
+.pl-ticket-card--garten {
+    background-image: url("https://cdn02.plentyone.com/txddaqsiwduy/frontend/ChatGPT_Image_16._Sept._2026__10_19_23__1_.png") !important;
+}
+.pl-ticket-card--newsletter {
+    background-image: url("https://cdn02.plentyone.com/txddaqsiwduy/frontend/ChatGPT_Image_16._Sept._2026__10_19_24__2_.png") !important;
+}
+.pl-ticket-card--sale {
+    background-image: url("https://cdn02.plentyone.com/txddaqsiwduy/frontend/ChatGPT_Image_16._Sept._2026__10_19_24__3_.png") !important;
+}
+
 </style>

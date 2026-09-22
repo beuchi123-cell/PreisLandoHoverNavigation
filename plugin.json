@@ -2,16 +2,15 @@
   "name": "PreisLandoHoverNavigation",
   "namespace": "PreisLandoHoverNavigation",
   "type": "theme",
-  "version": "2.0.0.0",
+  "version": "1.4.27.0",
   "license": "MIT",
-  "description": "PreisLando Clean Rebuild: Navigation, responsive Header, Mobile-Menue, Suche, Footer, Barrierefreiheit und Schach-Easter-Egg aus einer bereinigten CSS/JS-Struktur.",
+  "description": "PreisLando Navigation v1.4.27: No-Flash, Header-only Navigationserkennung, sicherer Root-Cache, Route-Fix, Mobile, Barrierefreiheit und Schach-Easter-Egg",
   "author": "PreisLando",
   "keywords": [
     "plentyShop LTS",
     "navigation",
     "theme",
-    "accessibility",
-    "PreisLando"
+    "hover"
   ],
   "require": [],
   "serviceProvider": "PreisLandoHoverNavigation\\Providers\\HoverNavigationServiceProvider"

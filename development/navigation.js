@@ -18,9 +18,9 @@
     const ROOT_CACHE_KEY = "preislando.rootCategories.v1427";
     const ROOT_CACHE_TTL = 15 * 60 * 1000;
     
-    window.PreisLandoHoverVersion = "1.4.28.0";
-    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.28.0");
-    console.info("[PreisLandoHoverNavigation] v1.4.28.0 geladen");
+    window.PreisLandoHoverVersion = "1.4.28.2";
+    document.documentElement.setAttribute("data-preislando-hover-version", "1.4.28.2");
+    console.info("[PreisLandoHoverNavigation] v1.4.28.2 geladen");
 
     let hoverOpenTimer = null;
     let hoverCloseTimer = null;
